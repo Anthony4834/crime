@@ -48,6 +48,9 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
     assert manifest["cors"]["intended_consumer_origins"] == ["http://localhost:5173", "https://fmr.fyi"]
     assert (output_dir / ".nojekyll").exists()
     assert (output_dir / "crime-data-client.js").exists()
+    client_js = (output_dir / "crime-data-client.js").read_text(encoding="utf-8")
+    assert "getCrimeStatsForZips" in client_js
+    assert "analyzeCrimeStatsGroup" in client_js
 
     scores = json.loads((output_dir / "2024" / "source_universe" / "scores.json").read_text(encoding="utf-8"))
     row = scores["records"][0]

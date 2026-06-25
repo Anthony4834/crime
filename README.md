@@ -431,6 +431,33 @@ const stats = await fetch(
 
 The request key is a 5-digit ZIP-shaped value and is matched to the Census ZCTA key. ZIPs and ZCTAs are not identical, so response objects include both `zip` and `zcta`; for this static API they are the same normalized key.
 
+For county-style or custom-area analysis, pass multiple ZIPs to the browser client:
+
+```js
+import { getCrimeStatsForZips } from "https://YOUR_PAGES_HOST/crime-data-client.js";
+
+const countyStats = await getCrimeStatsForZips({
+  baseUrl: "https://YOUR_PAGES_HOST",
+  year: 2024,
+  label: "Example County",
+  zips: ["90210", "90211", "90212"],
+  includeMembers: false
+});
+```
+
+The returned group object includes:
+
+- `population_total`
+- summed crime counts
+- rates per 1,000 recomputed from summed counts and population
+- population-weighted ZIP/ZCTA score averages
+- observed vs modeled ZIP counts
+- confidence grade counts
+- missing ZIPs
+- optional member records
+
+Because GitHub Pages is static hosting, arbitrary multi-ZIP analysis cannot be handled by a server-side POST endpoint. The client helper performs the fan-out to per-ZIP JSON files and computes the group summary in the browser.
+
 GitHub Pages serves static files with permissive CORS headers. The bundle records the intended consumer origins in `manifest.json` from `config/settings.yaml`:
 
 ```yaml
