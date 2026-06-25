@@ -394,8 +394,6 @@ data/server/
       2024/
         zips/
           90210.json
-        counties/
-          06037.json
   2024/
     coverage.json
     national_combined/
@@ -413,7 +411,6 @@ Stable URLs after deployment:
 ```text
 https://YOUR_PAGES_HOST/manifest.json
 https://YOUR_PAGES_HOST/api/v1/2024/zips/90210.json
-https://YOUR_PAGES_HOST/api/v1/2024/counties/06037.json
 https://YOUR_PAGES_HOST/2024/national_combined/scores.json
 https://YOUR_PAGES_HOST/2024/source_universe/scores.json
 https://YOUR_PAGES_HOST/2024/county_observed_allocated/scores.json
@@ -448,17 +445,7 @@ const stats = await fetch(
 
 The request key is a 5-digit ZIP-shaped value and is matched to the Census ZCTA key. ZIPs and ZCTAs are not identical, so response objects include both `zip` and `zcta`; for this static API they are the same normalized key.
 
-For a precomputed county group, use a 5-digit county FIPS endpoint:
-
-```js
-import { getCrimeStatsForCounty } from "https://YOUR_PAGES_HOST/crime-data-client.js";
-
-const countyStats = await getCrimeStatsForCounty({
-  baseUrl: "https://YOUR_PAGES_HOST",
-  year: 2024,
-  countyFips: "06037"
-});
-```
+The crime bundle does not resolve addresses, cities, counties, states, metros, or custom market areas. Consumers such as FMR own that location graph. Resolve the target area to a ZIP/ZCTA list in the consuming app, then call the ZIP endpoint or group helper.
 
 For county-style or custom-area analysis, pass multiple ZIPs to the browser client:
 

@@ -111,16 +111,6 @@ export async function getCrimeStatsForZips(options = {}) {
   });
 }
 
-export async function getCrimeStatsForCounty(options = {}) {
-  const baseUrl = (options.baseUrl || "").replace(/\/$/, "");
-  if (!baseUrl) throw new Error("baseUrl is required");
-  if (!options.countyFips) throw new Error("countyFips is required");
-
-  const year = options.year || await latestYearFromBaseUrl(baseUrl);
-  const countyFips = String(options.countyFips).trim().padStart(5, "0");
-  return getJson(`${baseUrl}/api/v1/${year}/counties/${countyFips}.json`);
-}
-
 export function analyzeCrimeStatsGroup(records, options = {}) {
   const uniqueRecords = dedupeRecords(records);
   const requestedZips = options.requestedZips || uniqueRecords.map((record) => normalizeZcta(record.zcta));

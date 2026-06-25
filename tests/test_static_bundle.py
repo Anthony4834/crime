@@ -60,7 +60,8 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
     client_js = (output_dir / "crime-data-client.js").read_text(encoding="utf-8")
     assert "getCrimeStatsForZips" in client_js
     assert "analyzeCrimeStatsGroup" in client_js
-    assert "getCrimeStatsForCounty" in client_js
+    assert "getCrimeStatsForCounty" not in client_js
+    assert manifest["geography_resolution"]["runtime_scope"] == "zcta_only"
 
     scores = json.loads((output_dir / "2024" / "source_universe" / "scores.json").read_text(encoding="utf-8"))
     row = scores["records"][0]
@@ -83,9 +84,7 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
     assert zip_api["path_template"] == "api/v1/2024/zips/{zip}.json"
     assert zip_api["scope"] == "national_combined"
     assert zip_api["row_count"] == 2
-    county_api = manifest["years"]["2024"]["county_api"]
-    assert county_api["path_template"] == "api/v1/2024/counties/{county_fips}.json"
-    assert county_api["row_count"] == 1
+    assert "county_api" not in manifest["years"]["2024"]
 
     zip_record = json.loads((output_dir / "api" / "v1" / "2024" / "zips" / "00601.json").read_text(encoding="utf-8"))
     assert zip_record["zip"] == "00601"
@@ -95,7 +94,4 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
     assert zip_record["coverage_status"] == "observed"
     assert zip_record["overall_crime_score_0_100"] == 42.5
 
-    county_record = json.loads((output_dir / "api" / "v1" / "2024" / "counties" / "25021.json").read_text(encoding="utf-8"))
-    assert county_record["county_fips"] == "25021"
-    assert county_record["member_zips"] == ["00602"]
-    assert county_record["coverage"]["county_observed_zip_count"] == 1
+    assert not (output_dir / "api" / "v1" / "2024" / "counties").exists()
