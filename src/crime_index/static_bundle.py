@@ -12,11 +12,7 @@ from urllib.request import Request, urlopen
 from crime_index.utils.time_utils import utc_now_naive
 
 SCORES_FILE_PATTERN = re.compile(r"^zcta_crime_scores_(?P<year>\d{4})(?:_(?P<scope>.+))?\.csv$")
-COVERAGE_FILE_PATTERN = re.compile(r"^zcta_national_coverage_(?P<year>\d{4})\.csv$")
-COMBINED_SCOPE = "national_combined"
 OBSERVED_SCOPE = "source_universe"
-COUNTY_SCOPE = "county_observed_allocated"
-MODELED_SCOPE = "national_modeled_baseline"
 
 INT_FIELDS = {
     "year",
@@ -78,7 +74,7 @@ def build_static_bundle(
     output_dir = Path(output_dir)
     year_filter = {str(year) for year in years} if years else None
     scope_filter = set(scopes) if scopes else None
-    _clear_generated_api_files(output_dir)
+    _clear_generated_bundle_files(output_dir)
 
     manifest: dict[str, Any] = {
         "schema_version": 1,
@@ -93,9 +89,13 @@ def build_static_bundle(
             "runtime_scope": "zcta_only",
             "note": "Consumers own address, city, county, metro, and custom-area mapping. Pass resolved ZIP/ZCTA keys to the ZIP API or client-side group analyzer.",
         },
+        "runtime_data_policy": {
+            "published_scope": OBSERVED_SCOPE,
+            "fallbacks": "disabled",
+            "note": "The public API only serves direct granular observed ZCTA records. It does not fall back to county-allocated or national-modeled estimates.",
+        },
         "years": {},
     }
-    score_records: dict[tuple[str, str], list[dict[str, Any]]] = {}
 
     for csv_path in sorted(export_dir.glob("zcta_crime_scores_*.csv")):
         match = SCORES_FILE_PATTERN.match(csv_path.name)
@@ -103,13 +103,14 @@ def build_static_bundle(
             continue
         year = match.group("year")
         scope = match.group("scope") or "source_universe"
+        if scope != OBSERVED_SCOPE:
+            continue
         if year_filter and year not in year_filter:
             continue
         if scope_filter and scope not in scope_filter:
             continue
 
         records = _read_csv_records(csv_path)
-        score_records[(year, scope)] = records
         relative_path = Path(year) / scope / "scores.json"
         output_path = output_dir / relative_path
         _write_json(
@@ -130,43 +131,12 @@ def build_static_bundle(
             "coverage_status_counts": _counts(records, "coverage_status"),
             "data_source_type_counts": _counts(records, "data_source_type"),
         }
-
-    _write_combined_scopes(output_dir, manifest, score_records, scope_filter)
-
-    for csv_path in sorted(export_dir.glob("zcta_national_coverage_*.csv")):
-        match = COVERAGE_FILE_PATTERN.match(csv_path.name)
-        if not match:
-            continue
-        year = match.group("year")
-        if year_filter and year not in year_filter:
-            continue
-        records = _read_csv_records(csv_path)
-        relative_path = Path(year) / "coverage.json"
-        output_path = output_dir / relative_path
-        _write_json(
-            output_path,
-            {
-                "year": int(year),
-                "row_count": len(records),
-                "records": records,
-            },
-        )
-        year_entry = manifest["years"].setdefault(year, {"scopes": {}})
-        year_entry["coverage"] = {
-            "path": relative_path.as_posix(),
-            "row_count": len(records),
-            "sha256": _sha256(output_path),
-            "coverage_status_counts": _counts(records, "coverage_status"),
-            "data_source_type_counts": _counts(records, "data_source_type"),
-        }
+        year_entry["zip_api"] = _write_zip_api(output_dir, year, records, scope=scope)
+        year_entry["coverage"] = _write_observed_coverage(output_dir, year, records)
 
     for year_entry in manifest["years"].values():
         scopes_for_year = year_entry.get("scopes", {})
-        if COMBINED_SCOPE in scopes_for_year:
-            year_entry["default_scope"] = COMBINED_SCOPE
-        elif MODELED_SCOPE in scopes_for_year:
-            year_entry["default_scope"] = MODELED_SCOPE
-        elif OBSERVED_SCOPE in scopes_for_year:
+        if OBSERVED_SCOPE in scopes_for_year:
             year_entry["default_scope"] = OBSERVED_SCOPE
         elif scopes_for_year:
             year_entry["default_scope"] = sorted(scopes_for_year)[0]
@@ -178,56 +148,7 @@ def build_static_bundle(
     return manifest
 
 
-def _write_combined_scopes(
-    output_dir: Path,
-    manifest: dict[str, Any],
-    score_records: dict[tuple[str, str], list[dict[str, Any]]],
-    scope_filter: set[str] | None,
-) -> None:
-    if scope_filter and COMBINED_SCOPE not in scope_filter:
-        return
-    years = sorted({year for year, _ in score_records})
-    for year in years:
-        observed = score_records.get((year, OBSERVED_SCOPE))
-        county = score_records.get((year, COUNTY_SCOPE))
-        modeled = score_records.get((year, MODELED_SCOPE))
-        if not modeled and not county and not observed:
-            continue
-
-        by_zcta: dict[str, dict[str, Any]] = {}
-        for layer in [modeled or [], county or [], observed or []]:
-            for record in layer:
-                by_zcta[str(record["zcta"])] = dict(record)
-
-        records = [by_zcta[zcta] for zcta in sorted(by_zcta)]
-        for record in records:
-            record["comparison_scope"] = COMBINED_SCOPE
-            record["comparison_scope_value"] = ""
-
-        relative_path = Path(year) / COMBINED_SCOPE / "scores.json"
-        output_path = output_dir / relative_path
-        _write_json(
-            output_path,
-            {
-                "year": int(year),
-                "scope": COMBINED_SCOPE,
-                "row_count": len(records),
-                "records": records,
-            },
-        )
-
-        year_entry = manifest["years"].setdefault(year, {"scopes": {}})
-        year_entry["scopes"][COMBINED_SCOPE] = {
-            "path": relative_path.as_posix(),
-            "row_count": len(records),
-            "sha256": _sha256(output_path),
-            "coverage_status_counts": _counts(records, "coverage_status"),
-            "data_source_type_counts": _counts(records, "data_source_type"),
-        }
-        year_entry["zip_api"] = _write_zip_api(output_dir, year, records)
-
-
-def _write_zip_api(output_dir: Path, year: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+def _write_zip_api(output_dir: Path, year: str, records: list[dict[str, Any]], scope: str) -> dict[str, Any]:
     base_path = Path("api") / "v1" / year / "zips"
     for record in records:
         zcta = str(record["zcta"]).zfill(5)
@@ -238,9 +159,41 @@ def _write_zip_api(output_dir: Path, year: str, records: list[dict[str, Any]]) -
         api_record["api_path"] = f"/{base_path.as_posix()}/{zcta}.json"
         _write_json(output_dir / base_path / f"{zcta}.json", api_record)
     return {
-        "scope": COMBINED_SCOPE,
+        "scope": scope,
         "path_template": f"{base_path.as_posix()}/{{zip}}.json",
         "row_count": len(records),
+    }
+
+
+def _write_observed_coverage(output_dir: Path, year: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+    relative_path = Path(year) / "coverage.json"
+    output_path = output_dir / relative_path
+    coverage_records = [
+        {
+            "zcta": str(record["zcta"]).zfill(5),
+            "year": int(record.get("year") or year),
+            "population_total": record.get("population_total"),
+            "coverage_status": record.get("coverage_status"),
+            "data_source_type": record.get("data_source_type"),
+            "coverage_notes": None,
+        }
+        for record in records
+    ]
+    _write_json(
+        output_path,
+        {
+            "year": int(year),
+            "scope": OBSERVED_SCOPE,
+            "row_count": len(coverage_records),
+            "records": coverage_records,
+        },
+    )
+    return {
+        "path": relative_path.as_posix(),
+        "row_count": len(coverage_records),
+        "sha256": _sha256(output_path),
+        "coverage_status_counts": _counts(coverage_records, "coverage_status"),
+        "data_source_type_counts": _counts(coverage_records, "data_source_type"),
     }
 
 
@@ -275,10 +228,18 @@ def check_static_cors(base_url: str, origins: list[str]) -> list[dict[str, Any]]
     return results
 
 
-def _clear_generated_api_files(output_dir: Path) -> None:
+def _clear_generated_bundle_files(output_dir: Path) -> None:
     api_dir = output_dir / "api" / "v1"
     if api_dir.exists():
         shutil.rmtree(api_dir)
+    children = output_dir.iterdir() if output_dir.exists() else []
+    for child in children:
+        if child.is_dir() and re.fullmatch(r"\d{4}", child.name):
+            shutil.rmtree(child)
+    for filename in ["manifest.json", "crime-data-client.js", ".nojekyll"]:
+        path = output_dir / filename
+        if path.exists():
+            path.unlink()
 
 
 def _read_csv_records(path: Path) -> list[dict[str, Any]]:

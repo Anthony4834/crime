@@ -53,7 +53,9 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
         allowed_origins=["http://localhost:5173", "https://fmr.fyi"],
     )
 
-    assert manifest["years"]["2024"]["default_scope"] == "national_combined"
+    assert manifest["years"]["2024"]["default_scope"] == "source_universe"
+    assert manifest["runtime_data_policy"]["fallbacks"] == "disabled"
+    assert manifest["runtime_data_policy"]["published_scope"] == "source_universe"
     assert manifest["cors"]["intended_consumer_origins"] == ["http://localhost:5173", "https://fmr.fyi"]
     assert (output_dir / ".nojekyll").exists()
     assert (output_dir / "crime-data-client.js").exists()
@@ -74,16 +76,15 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
     coverage = json.loads((output_dir / "2024" / "coverage.json").read_text(encoding="utf-8"))
     assert coverage["row_count"] == 1
 
-    combined = json.loads((output_dir / "2024" / "national_combined" / "scores.json").read_text(encoding="utf-8"))
-    assert combined["row_count"] == 2
-    assert combined["records"][0]["coverage_status"] == "observed"
-    assert combined["records"][0]["comparison_scope"] == "national_combined"
-    assert combined["records"][1]["coverage_status"] == "county_observed_allocated"
+    assert set(manifest["years"]["2024"]["scopes"]) == {"source_universe"}
+    assert not (output_dir / "2024" / "national_combined").exists()
+    assert not (output_dir / "2024" / "county_observed_allocated").exists()
+    assert not (output_dir / "2024" / "national_modeled_baseline").exists()
 
     zip_api = manifest["years"]["2024"]["zip_api"]
     assert zip_api["path_template"] == "api/v1/2024/zips/{zip}.json"
-    assert zip_api["scope"] == "national_combined"
-    assert zip_api["row_count"] == 2
+    assert zip_api["scope"] == "source_universe"
+    assert zip_api["row_count"] == 1
     assert "county_api" not in manifest["years"]["2024"]
 
     zip_record = json.loads((output_dir / "api" / "v1" / "2024" / "zips" / "00601.json").read_text(encoding="utf-8"))
@@ -94,4 +95,5 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
     assert zip_record["coverage_status"] == "observed"
     assert zip_record["overall_crime_score_0_100"] == 42.5
 
+    assert not (output_dir / "api" / "v1" / "2024" / "zips" / "00602.json").exists()
     assert not (output_dir / "api" / "v1" / "2024" / "counties").exists()

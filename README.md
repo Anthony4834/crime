@@ -299,13 +299,9 @@ The `source_universe` output contains only ZCTAs with observed local incident da
 
 The modeled baseline uses the BJS 2024 national offense rates from *Crime Known to Law Enforcement, 2024*: 370.8 violent offenses and 1,835.1 property offenses per 100,000 persons, stored as 3.708 and 18.351 per 1,000 residents.
 
-After the latest local rebuild, the default `national_combined` layer contains 33,772 populated ZCTAs:
+The county and modeled outputs are retained as offline analytical artifacts only. They are not published as ZIP API responses because county averages and national baselines can be misleading for individual ZIPs, cities, and small high-variance places.
 
-- 1,185 direct observed ZCTAs from nineteen local incident feeds.
-- 30,558 county-observed allocated ZCTAs from FBI CDE CIUS county aggregation.
-- 2,029 national modeled fallback ZCTAs where the CDE county layer did not produce a usable county row.
-
-That means 31,743 populated ZCTAs, or 94.0% of the current national bundle, are backed by observed local or county-level crime data. The remaining 6.0% stay in the modeled fallback and are explicitly marked `coverage_status = national_modeled`.
+After the latest local rebuild, the public static API publishes 1,185 direct observed ZCTAs from nineteen local incident feeds. ZIPs outside that direct observed set return no API record instead of falling back to county or national modeled values.
 
 - LAPD 2024 public crime incidents.
 - Chicago 2024 public crime incidents.
@@ -331,14 +327,14 @@ All nineteen are configured in `config/sources.yaml` with `download` blocks, so 
 
 ## Path To Full-US Indexed Coverage
 
-The product already exports a row for every populated U.S. ZCTA through the static `national_combined` API. Most populated ZCTAs now use either direct local incident data or county-observed FBI CDE data. To move the last modeled fallback areas to observed coverage, add official local, county, state, or federal sources in layers:
+The hosted API does not currently have full-US granular coverage. It deliberately publishes only direct observed ZCTA rows. To grow toward comprehensive nationwide coverage, add official granular sources in layers:
 
-1. Keep the Census ZCTA-to-county relationship file as the default ZIP/ZCTA-to-county crosswalk. It provides real county split weights from `AREALAND_PART` instead of equal splits.
-2. Use FBI CDE CIUS agency tables as the annual nationwide county-observed layer.
-3. Add county-equivalent crosswalks for states where CDE uses non-county regions, especially Connecticut planning regions and Puerto Rico municipios.
-4. Add state NIBRS/UCR portals where CDE county mapping is incomplete or where county-equivalent reporting changed after the 2020 Census relationship file.
-5. Add high-volume official city/county incident feeds with coordinates for higher-confidence direct observed rows.
-6. Keep every ZCTA in the national export and use `coverage_status`, `data_source_type`, `source_names`, `observed_level`, `allocation_method`, and `confidence_grade` to distinguish direct observed, county-observed allocated, and modeled rows.
+1. Keep address, city, county, state, metro, and market-area resolution in the consuming app. The crime API accepts already-resolved ZIP/ZCTA lists.
+2. Keep Census ZCTA relationship files as analysis crosswalks, but do not use county averages as ZIP-level runtime facts.
+3. Use FBI CDE CIUS agency tables to audit coverage gaps and prioritize agencies, not as a public ZIP fallback.
+4. Add statewide incident, NIBRS, or UCR exports where they include enough agency, city, ZIP, or coordinate detail to map below the county level.
+5. Add high-volume official city and county incident feeds with coordinates for higher-confidence direct observed ZCTA rows.
+6. Add explicit city or agency rollup products only when the source geography supports that claim; do not relabel county data as ZIP or city data.
 7. Rebuild with `python -m crime_index.cli run-all --year 2024`, then review `data/processed/quality_report.md` and `data/server/manifest.json` before using the exports.
 
 Analytical compatibility outputs are also written:
@@ -396,13 +392,7 @@ data/server/
           90210.json
   2024/
     coverage.json
-    national_combined/
-      scores.json
     source_universe/
-      scores.json
-    county_observed_allocated/
-      scores.json
-    national_modeled_baseline/
       scores.json
 ```
 
@@ -411,10 +401,7 @@ Stable URLs after deployment:
 ```text
 https://YOUR_PAGES_HOST/manifest.json
 https://YOUR_PAGES_HOST/api/v1/2024/zips/90210.json
-https://YOUR_PAGES_HOST/2024/national_combined/scores.json
 https://YOUR_PAGES_HOST/2024/source_universe/scores.json
-https://YOUR_PAGES_HOST/2024/county_observed_allocated/scores.json
-https://YOUR_PAGES_HOST/2024/national_modeled_baseline/scores.json
 https://YOUR_PAGES_HOST/2024/coverage.json
 https://YOUR_PAGES_HOST/crime-data-client.js
 ```
@@ -438,10 +425,11 @@ Browser usage from `localhost` or `fmr.fyi`:
 For direct fetches, use the ZIP endpoint:
 
 ```js
-const stats = await fetch(
-  "https://YOUR_PAGES_HOST/api/v1/2024/zips/90210.json"
-).then((response) => response.json());
+const response = await fetch("https://YOUR_PAGES_HOST/api/v1/2024/zips/90210.json");
+const stats = response.status === 404 ? null : await response.json();
 ```
+
+ZIPs without direct observed data return 404/no record. Consumers should display crime data as unavailable for those ZIPs rather than substituting county-level or national-modeled values.
 
 The request key is a 5-digit ZIP-shaped value and is matched to the Census ZCTA key. ZIPs and ZCTAs are not identical, so response objects include both `zip` and `zcta`; for this static API they are the same normalized key.
 
@@ -467,7 +455,8 @@ The returned group object includes:
 - summed crime counts
 - rates per 1,000 recomputed from summed counts and population
 - population-weighted ZIP/ZCTA score averages
-- observed vs modeled ZIP counts
+- found and missing ZIP counts
+- observed coverage counts
 - confidence grade counts
 - missing ZIPs
 - optional member records
@@ -493,7 +482,7 @@ python -m crime_index.cli check-static-cors --base-url https://YOUR_PAGES_HOST
 
 GitHub Pages cannot enforce API-key auth or a private per-origin allowlist for public static files. If the data needs real authentication, usage metering, or origin restriction, put a CDN worker or backend proxy in front of the static bundle. For the current public yearly index, no API key is required.
 
-When direct observed, county-observed, and modeled exports are present, the default static scope is `national_combined`: direct local incident rows have first priority, county-observed allocated rows fill the next tier, and modeled rows fill the rest of the country. The provenance fields still show whether each row is `observed`, `county_observed_allocated`, or `national_modeled`.
+The default static scope is `source_universe`. The hosted bundle disables runtime fallbacks and publishes only direct observed ZCTA records.
 
 ## Add A New Jurisdiction
 
