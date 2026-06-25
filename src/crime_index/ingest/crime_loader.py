@@ -54,7 +54,8 @@ def ingest_source(
     if not path.exists():
         raise FileNotFoundError(f"Crime source not found: {path}")
 
-    df = read_tabular_file(path)
+    df = read_tabular_file(path, source_config.get("read_csv"))
+    df = apply_row_filters(df, source_config.get("row_filters"))
     now = utc_now_naive()
     file_hash = file_sha256(path)
     raw_file_id = file_hash
@@ -97,11 +98,11 @@ def ingest_source(
     return len(df)
 
 
-def read_tabular_file(path: str | Path) -> pd.DataFrame:
+def read_tabular_file(path: str | Path, read_options: dict[str, Any] | None = None) -> pd.DataFrame:
     path = Path(path)
     suffix = path.suffix.lower()
     if suffix == ".csv":
-        return pd.read_csv(path)
+        return pd.read_csv(path, **_pandas_read_options(read_options))
     if suffix in {".json", ".jsonl"}:
         return pd.read_json(path, lines=suffix == ".jsonl")
     if suffix == ".geojson":
@@ -119,6 +120,54 @@ def read_tabular_file(path: str | Path) -> pd.DataFrame:
     if suffix == ".parquet":
         return pd.read_parquet(path)
     raise ValueError(f"Unsupported crime source format: {suffix}")
+
+
+def _pandas_read_options(read_options: dict[str, Any] | None) -> dict[str, Any]:
+    options = dict(read_options or {})
+    dtype = options.get("dtype")
+    if isinstance(dtype, str) and dtype.lower() in {"str", "string"}:
+        options["dtype"] = str
+    return options
+
+
+def apply_row_filters(df: pd.DataFrame, row_filters: dict[str, Any] | None) -> pd.DataFrame:
+    if not row_filters or df.empty:
+        return df
+    keep = pd.Series(True, index=df.index)
+    for rule in row_filters.get("include", []) or []:
+        column = rule.get("column")
+        if not column or column not in df:
+            continue
+        keep &= _row_filter_mask(df[column], rule)
+    for rule in row_filters.get("exclude", []) or []:
+        column = rule.get("column")
+        if not column or column not in df:
+            continue
+        keep &= ~_row_filter_mask(df[column], rule)
+    return df.loc[keep].reset_index(drop=True)
+
+
+def _row_filter_mask(series: pd.Series, rule: dict[str, Any]) -> pd.Series:
+    mask = pd.Series(False, index=series.index)
+    values = rule.get("values")
+    if values:
+        normalized_values = {_normalize_filter_value(value, rule) for value in values}
+        mask |= series.map(lambda value: _normalize_filter_value(value, rule) in normalized_values)
+    pattern = rule.get("regex")
+    if pattern:
+        mask |= series.astype(str).str.contains(
+            pattern,
+            case=bool(rule.get("case_sensitive", False)),
+            na=False,
+        )
+    return mask
+
+
+def _normalize_filter_value(value: object, rule: dict[str, Any]) -> str:
+    text = "" if value is None or pd.isna(value) else str(value).strip()
+    if not rule.get("case_sensitive", False):
+        text = text.upper()
+    return text
 
 
 def build_staged_incidents(
@@ -281,10 +330,20 @@ def _parse_point_wkt(value: Any) -> tuple[float, float] | None:
     if not text:
         return None
     match = re.match(r"POINT\s*\(\s*([-+]?\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s*\)", text, flags=re.IGNORECASE)
+    if match:
+        longitude = to_float(match.group(1))
+        latitude = to_float(match.group(2))
+        if latitude is None or longitude is None:
+            return None
+        return latitude, longitude
+    match = re.match(
+        r"\(?\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*\)?",
+        text,
+    )
     if not match:
         return None
-    longitude = to_float(match.group(1))
-    latitude = to_float(match.group(2))
+    latitude = to_float(match.group(1))
+    longitude = to_float(match.group(2))
     if latitude is None or longitude is None:
         return None
     return latitude, longitude

@@ -1026,3 +1026,422 @@ sources:
     incident_id_column: incident_entry_id
     source_crs: EPSG:4326
     timezone: America/Detroit
+
+  lasd_2024:
+    file: data/raw/crime/lasd_part_i_ii_crimes_2024.csv
+    read_csv:
+      dtype: str
+      on_bad_lines: skip
+    download:
+      type: direct
+      url: http://shq.lasdnews.net/CrimeStats/CAASS/2024-PART_I_AND_II_CRIMES.csv
+      timeout_seconds: 600
+    source_type: local_incident
+    source_url: https://lasd.org/transparency/part1and2crimedata/
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Los Angeles County Sheriff's Department jurisdiction
+    coverage_state: CA
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: half_block_rounded_point
+    offense_mapping_quality: part_i_ii_and_configured_keyword_mapping
+    coverage_notes: LASD 2024 historical Part I and II Crimes CSV includes incident ZIP and longitude/latitude rounded to 3 decimals; source states data is preliminary/incomplete and should not be used to duplicate official FBI summarized counts. The official HTTPS file host has an expired TLS certificate, so ingestion uses the same official host over HTTP. Two malformed CSV rows with unescaped quote characters are skipped by the configured CSV reader.
+    jurisdiction_name: Los Angeles County Sheriff's Department
+    jurisdiction_state: CA
+    date_column: INCIDENT_DATE
+    time_column: null
+    offense_column: CATEGORY
+    offense_fallback_columns:
+      - STAT_DESC
+      - PART_CATEGORY
+    offense_code_column: STAT
+    latitude_column: LATITUDE
+    longitude_column: LONGITUDE
+    address_column: ADDRESS
+    zip_column: ZIP
+    incident_id_column: LURN_SAK
+    source_crs: EPSG:4326
+    timezone: America/Los_Angeles
+
+  san_antonio_2024:
+    file: data/raw/crime/san_antonio_sapd_offenses_2024.csv
+    download:
+      type: ckan_datastore
+      base_url: https://data.sanantonio.gov
+      resource_id: f36bb931-8fb4-481c-83d9-a3589108bb20
+      select:
+        - _id
+        - Report_ID
+        - Report_Date
+        - NIBRS_Code_Name
+        - NIBRS_Crime_Against
+        - Service_Area
+        - NIBRS_Group
+        - Zip_Code
+        - DateTime
+      where: "\"Report_Date\" >= '2024-01-01' AND \"Report_Date\" < '2025-01-01'"
+      order_by: "\"_id\""
+      page_size: 5000
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://data.sanantonio.gov/dataset/sapd-offenses/resource/f36bb931-8fb4-481c-83d9-a3589108bb20
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: San Antonio Police Department jurisdiction
+    coverage_state: TX
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: dashboard_snapshot
+    coordinate_quality: offense_zip_code
+    offense_mapping_quality: nibrs_and_configured_keyword_mapping
+    coverage_notes: SAPD Offenses official CKAN dataset filtered to 2024 Report_Date; rows include NIBRS offense fields and offense ZIP code but not point coordinates.
+    jurisdiction_name: San Antonio
+    jurisdiction_state: TX
+    date_column: Report_Date
+    time_column: null
+    offense_column: NIBRS_Code_Name
+    offense_fallback_columns:
+      - NIBRS_Group
+      - NIBRS_Crime_Against
+    offense_code_column: NIBRS_Group
+    latitude_column: null
+    longitude_column: null
+    address_column: Service_Area
+    zip_column: Zip_Code
+    incident_id_column: _id
+    source_crs: EPSG:4326
+    timezone: America/Chicago
+
+  austin_nibrs_2024:
+    file: data/raw/crime/austin_nibrs_group_a_offenses_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.austintexas.gov/resource/i7fg-wrk5
+      limit: 100000
+      select:
+        - offenseid
+        - primary_key
+        - occurred_date
+        - occurred_on_time
+        - sector
+        - council_district
+        - nibrs_category
+        - nibrs_desc
+        - nibrs_group
+        - occ_year
+        - occ_month
+        - census_block_group
+        - reported_date
+        - occurred_day_of_week
+        - zip_code
+        - location_description
+        - nibrs_offense_code_and_extension_description
+        - internal_clearance_status
+      where: occurred_date between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+      order: occurred_date ASC, offenseid ASC
+    source_type: local_incident
+    source_url: https://data.austintexas.gov/Public-Safety/NIBRS-Group-A-Offense-Crimes/i7fg-wrk5
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Austin Police Department jurisdiction
+    coverage_state: TX
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: live_open_data_snapshot
+    coordinate_quality: offense_zip_code
+    offense_mapping_quality: nibrs_and_configured_keyword_mapping
+    coverage_notes: Austin Police Department NIBRS Group A offense data filtered to 2024 occurred_date; rows include NIBRS offense fields, offense ZIP code, and Census Block Group, but not point coordinates.
+    jurisdiction_name: Austin
+    jurisdiction_state: TX
+    date_column: occurred_date
+    time_column: occurred_on_time
+    offense_column: nibrs_desc
+    offense_fallback_columns:
+      - nibrs_offense_code_and_extension_description
+      - nibrs_group
+      - nibrs_category
+    offense_code_column: nibrs_group
+    latitude_column: null
+    longitude_column: null
+    address_column: location_description
+    zip_column: zip_code
+    incident_id_column: offenseid
+    source_crs: EPSG:4326
+    timezone: America/Chicago
+
+  jacksonville_jso_2024:
+    file: data/raw/crime/jacksonville_jso_nibrs_incidents_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services3.arcgis.com/7C7xW0yv6W8spzhp/arcgis/rest/services/Public_Transparency_Data_View_10_03_2025/FeatureServer/0
+      where: IncidentDateTime >= DATE '2024-01-01' AND IncidentDateTime < DATE '2025-01-01'
+      out_fields:
+        - OBJECTID
+        - GlobalID
+        - cmnIncidentNbr
+        - Address
+        - ZipCode
+        - nibrsCode
+        - VictimCount
+        - ReportDateTime
+        - IncidentDateTime
+        - nibrsDescription
+        - EsriPkey
+      order_by_fields: IncidentDateTime ASC, OBJECTID ASC
+      page_size: 2000
+      return_geometry: true
+      out_sr: 4326
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://transparency.jaxsheriff.org/
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Jacksonville Sheriff's Office jurisdiction
+    coverage_state: FL
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: live_open_data_snapshot
+    coordinate_quality: generalized_reported_point
+    offense_mapping_quality: nibrs_and_configured_keyword_mapping
+    coverage_notes: Jacksonville Sheriff's Office transparency map NIBRS incident layer filtered to 2024 IncidentDateTime; rows include NIBRS description/code, ZIP, and point geometry. The public source notes police response may not always generate an offense report.
+    jurisdiction_name: Jacksonville
+    jurisdiction_state: FL
+    date_column: IncidentDateTime
+    epoch_timezone: America/New_York
+    time_column: null
+    offense_column: nibrsDescription
+    offense_code_column: nibrsCode
+    latitude_column: geometry_y
+    longitude_column: geometry_x
+    address_column: Address
+    zip_column: ZipCode
+    incident_id_column: OBJECTID
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  atlanta_apd_2024:
+    file: data/raw/crime/atlanta_apd_crime_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services3.arcgis.com/Et5Qfajgiyosiw4d/arcgis/rest/services/OpenDataWebsite_Crime_view/FeatureServer/0
+      where: OccurredFromDate >= DATE '2024-01-01' AND OccurredFromDate < DATE '2025-01-01'
+      out_fields:
+        - OBJECTID
+        - IncidentNumber
+        - ReportNumber
+        - FireArmInvolved
+        - ReportDate
+        - OccurredFromDate
+        - OccurredToDate
+        - Day_of_the_week
+        - Part
+        - Crime_Against
+        - NibrsUcrCode
+        - NIBRS_Offense
+        - Vic_Count
+        - StreetAddress
+        - LocationType
+        - Longitude
+        - Latitude
+        - Zone
+        - BEAT
+        - NPU
+        - NhoodName
+        - NIBRS_Bucket
+      order_by_fields: OccurredFromDate ASC, OBJECTID ASC
+      page_size: 2000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://opendata.atlantapd.org/
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Atlanta Police Department jurisdiction
+    coverage_state: GA
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: live_open_data_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: nibrs_and_configured_keyword_mapping
+    coverage_notes: Atlanta Police Department Open Data crime feature service filtered to 2024 OccurredFromDate; rows include NIBRS fields and latitude/longitude, but no source ZIP column.
+    jurisdiction_name: Atlanta
+    jurisdiction_state: GA
+    date_column: OccurredFromDate
+    time_column: null
+    offense_column: NIBRS_Offense
+    offense_fallback_columns:
+      - NIBRS_Bucket
+      - Crime_Against
+    offense_code_column: NibrsUcrCode
+    latitude_column: Latitude
+    longitude_column: Longitude
+    address_column: StreetAddress
+    zip_column: null
+    incident_id_column: OBJECTID
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  phoenix_pd_2024:
+    file: data/raw/crime/phoenix_pd_crime_2024.csv
+    download:
+      type: ckan_datastore
+      base_url: https://www.phoenixopendata.com
+      resource_id: 0ce3411a-2fc6-4302-a33f-167f68608a20
+      select:
+        - _id
+        - INC NUMBER
+        - OCCURRED ON
+        - OCCURRED TO
+        - UCR CRIME CATEGORY
+        - 100 BLOCK ADDR
+        - ZIP
+        - PREMISE TYPE
+        - GRID
+      where: "\"OCCURRED ON\" LIKE '%/2024%'"
+      order_by: "\"_id\""
+      page_size: 5000
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://www.phoenixopendata.com/dataset/crime-data/resource/0ce3411a-2fc6-4302-a33f-167f68608a20
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Phoenix Police Department jurisdiction
+    coverage_state: AZ
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: offense_zip_code
+    offense_mapping_quality: ucr_and_configured_keyword_mapping
+    coverage_notes: Phoenix Police Department CKAN crime data filtered to 2024 OCCURRED ON text values; rows include primary UCR crime category and offense ZIP code, but not point coordinates.
+    jurisdiction_name: Phoenix
+    jurisdiction_state: AZ
+    date_column: OCCURRED ON
+    time_column: null
+    offense_column: UCR CRIME CATEGORY
+    offense_code_column: UCR CRIME CATEGORY
+    latitude_column: null
+    longitude_column: null
+    address_column: 100 BLOCK ADDR
+    zip_column: ZIP
+    incident_id_column: INC NUMBER
+    source_crs: EPSG:4326
+    timezone: America/Phoenix
+
+  chandler_pd_2024:
+    file: data/raw/crime/chandler_pd_general_offenses.csv
+    read_csv:
+      dtype: str
+      encoding: latin1
+    row_filters:
+      include:
+        - column: report_year
+          values:
+            - "2024"
+      exclude:
+        - column: report_summary_offense_code
+          values:
+            - NONCRIM
+            - NONINJUR
+            - TRAFFIC
+            - HRCOLLIS
+            - INJURYCO
+            - RUNAWAY
+            - OTHER
+        - column: report_primary_offense_description
+          regex: Collision|Traffic|Non Criminal|Welfare Check|Suspicious Activity|Found/Seized Property|Assist Other Agency|Missing|Lost Property|Death Investigation|Barking Dog|Dog at Large|Mental Health|Stolen Veh-Recovery|Swat/Sau Operation|Icac Investigation|Order of Protection Service
+        - column: report_status
+          regex: Unfounded
+    download:
+      type: direct
+      url: https://data.chandlerpd.com/catalog/general-offenses/download/csv
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://data.chandlerpd.com/catalog/general-offenses/
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Chandler Police Department jurisdiction
+    coverage_state: AZ
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: live_open_data_snapshot
+    coordinate_quality: generalized_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Chandler Police Department General Offenses CSV filtered to 2024 report_year; rows include offense descriptions, status, report address, and latitude/longitude. The ingestion excludes unfounded rows plus non-crime, traffic, collision, runaway, and ambiguous OTHER source buckets before indexing.
+    jurisdiction_name: Chandler
+    jurisdiction_state: AZ
+    date_column: report_event_date_time
+    time_column: null
+    offense_column: report_primary_offense_description
+    offense_fallback_columns:
+      - report_summary_offense_description
+      - report_summary_offense_code
+    offense_code_column: report_summary_offense_code
+    latitude_column: report_latitude
+    longitude_column: report_longitude
+    address_column: report_address
+    zip_column: null
+    incident_id_column: id
+    source_crs: EPSG:4326
+    timezone: America/Phoenix
+
+  fort_worth_pd_2024:
+    file: data/raw/crime/fort_worth_pd_crime_data_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services5.arcgis.com/3ddLCBXe1bRt7mzj/arcgis/rest/services/CFW_Open_Data_Police_Crime_Data_Table_view/FeatureServer/0
+      where: From_Date >= '2024-01-01' AND From_Date < '2025-01-01'
+      out_fields:
+        - Case_No_Offense
+        - Case_No
+        - Reported_Date
+        - Nature_Of_Call
+        - From_Date
+        - Offense
+        - Offense_Desc
+        - BLOCK_ADDRESS
+        - City
+        - State
+        - Beat
+        - Division
+        - CouncilDistrict
+        - Attempt_Complete
+        - Location_Type
+        - LocationTypeDescription
+        - intTotal
+        - Location_1
+        - ObjectId
+      order_by_fields: ObjectId ASC
+      page_size: 1000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://open-data-cfw.hub.arcgis.com/datasets/cfw-police-crime-data-table/about
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Fort Worth Police Department jurisdiction
+    coverage_state: TX
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: weekly_snapshot
+    coordinate_quality: approximate_block_or_reported_point
+    offense_mapping_quality: nibrs_and_configured_keyword_mapping
+    coverage_notes: Fort Worth Police Crime Data Table filtered to 2024 From_Date; the official open data page says the dataset comes from the police department, includes crime data sorted by offense, and is updated weekly. Rows include block address, offense fields, and a Location_1 latitude/longitude pair.
+    jurisdiction_name: Fort Worth
+    jurisdiction_state: TX
+    date_column: From_Date
+    time_column: null
+    offense_column: Offense_Desc
+    offense_fallback_columns:
+      - Nature_Of_Call
+      - Offense
+    offense_code_column: Offense
+    latitude_column: null
+    longitude_column: null
+    geocoded_point_column: Location_1
+    address_column: BLOCK_ADDRESS
+    zip_column: null
+    incident_id_column: Case_No_Offense
+    source_crs: EPSG:4326
+    timezone: America/Chicago

@@ -92,7 +92,7 @@ def build_static_bundle(
         "runtime_data_policy": {
             "published_scope": OBSERVED_SCOPE,
             "fallbacks": "disabled",
-            "note": "The public API only serves direct granular observed ZCTA records. It does not fall back to county-allocated or national-modeled estimates.",
+            "note": "The public API only serves complete direct granular observed ZCTA records. It excludes county-allocated, national-modeled, and partial-observed rows.",
         },
         "years": {},
     }
@@ -110,7 +110,11 @@ def build_static_bundle(
         if scope_filter and scope not in scope_filter:
             continue
 
-        records = _read_csv_records(csv_path)
+        records = [
+            record
+            for record in _read_csv_records(csv_path)
+            if record.get("coverage_status") in {None, "", "observed"}
+        ]
         relative_path = Path(year) / scope / "scores.json"
         output_path = output_dir / relative_path
         _write_json(

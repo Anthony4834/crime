@@ -360,6 +360,22 @@ def _apply_quality_metrics(df: pd.DataFrame, coverage: dict[str, Any], settings:
         else row.get("score_notes"),
         axis=1,
     )
+    high_population_threshold = settings.get("index", {}).get("high_population_partial_threshold", 50_000)
+    min_high_population_incidents = settings.get("index", {}).get("min_high_population_observed_incidents", 20)
+    partial_high_population = (
+        output["assigned_incident_count"].fillna(0).astype("int64").gt(0)
+        & output["population_total"].fillna(0).astype("float64").ge(float(high_population_threshold))
+        & output["assigned_incident_count"].fillna(0).astype("int64").lt(int(min_high_population_incidents))
+    )
+    if partial_high_population.any():
+        output.loc[partial_high_population, "coverage_status"] = "partial_observed"
+        output.loc[partial_high_population, "score_notes"] = output.loc[partial_high_population].apply(
+            lambda row: _append_note(
+                row.get("score_notes"),
+                "partial_observed_high_population_low_incident_count",
+            ),
+            axis=1,
+        )
     output = output.drop(columns=["assigned_count", "spatial_count"], errors="ignore")
     return output
 
@@ -373,6 +389,8 @@ def _append_note(existing: str | None, note: str) -> str:
 
 
 def _confidence_grade(row: pd.Series) -> str:
+    if row.get("coverage_status") == "partial_observed":
+        return "D"
     population = row.get("population_total")
     total = row.get("total_crime_count") or 0
     spatial_share = row.get("spatial_assignment_share") or 0
@@ -528,6 +546,10 @@ def _ensure_index_columns(df: pd.DataFrame) -> pd.DataFrame:
     if "coverage_status" in output:
         missing_observed_level = output["observed_level"].astype(str).str.strip() == ""
         output.loc[missing_observed_level & (output["coverage_status"] == "observed"), "observed_level"] = "zcta"
+        output.loc[
+            missing_observed_level & (output["coverage_status"] == "partial_observed"),
+            "observed_level",
+        ] = "zcta_partial"
         output.loc[missing_observed_level & (output["coverage_status"] == "national_modeled"), "observed_level"] = ""
     output["county_count"] = pd.to_numeric(output["county_count"], errors="coerce").fillna(0).astype("int64")
     return output

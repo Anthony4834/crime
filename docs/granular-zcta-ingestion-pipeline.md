@@ -10,35 +10,52 @@ Generate the current gap report with:
 python scripts/report_direct_coverage_gaps.py --year 2024 --target-output data/processed/direct_zcta_targets_2024_minpop_50000.csv
 ```
 
-Current 2024 exports show:
+Current 2024 exports after the June 25, 2026 local rebuild show:
 
 - 33,772 total rows in the old national modeled universe.
 - 33,174 populated ZCTA rows.
-- 1,265 direct observed ZCTAs in the public API.
-- 32,507 missing rows if zero-population rows are counted.
-- 31,909 missing populated ZCTAs.
-- 39,061,851 people covered by direct observed ZCTA data.
-- 299,010,009 people not yet covered by direct observed ZCTA data.
-- 11.6% population coverage.
+- 1,701 direct observed ZCTAs in the public API.
+- 65 partial direct rows excluded from covered counts.
+- 32,071 missing rows if zero-population rows are counted.
+- 31,473 missing populated ZCTAs.
+- 51,931,780 people covered by direct observed ZCTA data.
+- 286,140,080 people not yet covered by direct observed ZCTA data.
+- 15.4% population coverage.
 - 1,051 ZCTAs have at least 50,000 residents.
-- 234 of those high-population ZCTAs are covered.
-- 817 high-population ZCTAs are still missing.
+- 268 of those high-population ZCTAs are covered.
+- 783 high-population ZCTAs are still missing.
+- High-population target coverage is 25.5% by ZCTA count and 27.0% by population.
 
 Largest state gaps by missing population:
 
 | State | Missing ZCTAs | Missing Population | Population Coverage |
 | --- | ---: | ---: | ---: |
-| CA | 1,498 | 29,598,197 | 24.7% |
-| TX | 1,827 | 26,883,543 | 10.9% |
-| FL | 995 | 22,415,950 | 0.0% |
+| CA | 1,360 | 25,459,245 | 35.2% |
+| TX | 1,686 | 22,820,045 | 24.4% |
+| FL | 952 | 21,068,228 | 6.0% |
 | PA | 1,759 | 11,342,804 | 12.9% |
 | OH | 1,177 | 11,118,424 | 5.9% |
-| GA | 734 | 10,940,417 | 0.0% |
-| NY | 1,554 | 10,372,410 | 47.5% |
+| NY | 1,555 | 10,427,665 | 47.3% |
+| GA | 691 | 9,814,003 | 10.3% |
 | NC | 803 | 9,468,271 | 11.8% |
-| IL | 1,311 | 9,388,279 | 26.0% |
+| IL | 1,312 | 9,445,140 | 25.6% |
 | NJ | 595 | 9,343,809 | 0.0% |
-| MI | 948 | 9,097,189 | 9.7% |
+| MI | 949 | 9,149,186 | 9.2% |
+
+The remaining high-population target queue is concentrated in these states:
+
+| State | Missing High-Pop ZCTAs |
+| --- | ---: |
+| CA | 151 |
+| TX | 107 |
+| FL | 71 |
+| GA | 45 |
+| NJ | 27 |
+| OH | 26 |
+| AZ | 25 |
+| NC | 25 |
+| VA | 24 |
+| WA | 19 |
 
 ## Publication Standard
 
@@ -72,7 +89,7 @@ Tier A: Direct Incident Geometry
 Tier B: Direct Incident ZIP/ZCTA
 
 - Required fields: incident id, date/year, offense description/code, incident ZIP/ZCTA.
-- Output: normal incident pipeline through `zip_fallback`.
+- Output: normal incident pipeline through `zip_fallback`. In this project that term means direct source ZIP/ZCTA assignment when a row lacks usable coordinates; it is not county fallback.
 - Runtime status: `coverage_status = observed`, `observed_level = zcta`.
 - Confidence: medium unless source documents high-quality ZIP assignment.
 
@@ -317,6 +334,14 @@ Missing ZIPs stay missing. Group analysis may aggregate found ZIPs and report `m
 6. Add Tier D polygon aggregate ingestion with overlay lineage.
 7. Keep `make coverage-gaps` in the release checklist and fail release builds when the configured high-population target is not met.
 8. Iterate by state gap priority, starting with CA, TX, FL, PA, OH, GA, NY, MI, NC, and IL.
+
+## Current Implementation Status
+
+- Runtime fallbacks are disabled. `data/server/api/v1/YYYY/zips` publishes only `coverage_status = observed` rows.
+- High-population rows with only a tiny number of direct incidents are marked `partial_observed` and excluded from the public static API.
+- The source loader supports per-source CSV reader options and include/exclude row filters, so mixed feeds can drop unfounded, non-criminal, administrative, traffic, and ambiguous source buckets before normalization.
+- The current direct-source set includes the original large-city feeds plus LASD, San Antonio, Austin, Jacksonville, Atlanta, Phoenix, Chandler, and Fort Worth.
+- The most useful next source work is not county aggregation. It is a state-by-state source discovery queue driven by `data/processed/direct_zcta_targets_2024_minpop_50000.csv`, prioritizing the 783 missing ZCTAs with at least 50,000 residents.
 
 ## Notes From Source Research
 

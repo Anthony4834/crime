@@ -89,6 +89,69 @@ def test_coverage_metrics_use_incident_count_weights() -> None:
     assert by_zcta["spatial_count"] == 4
 
 
+def test_high_population_low_count_rows_are_partial_observed() -> None:
+    annual = pd.DataFrame(
+        [
+            _row("92336", 100000, violent=0, property=1, total=1),
+            _row("90650", 100000, violent=50, property=150, total=200),
+        ]
+    )
+    annual["comparison_scope"] = "source_universe"
+    annual["comparison_scope_value"] = ""
+    coverage = {
+        "zcta_assignment_rate": 1.0,
+        "spatial_assignment_rate": 1.0,
+        "offense_classification_rate": 1.0,
+        "date_completeness_rate": 1.0,
+        "by_zcta": pd.DataFrame(
+            [
+                {
+                    "zcta": "92336",
+                    "assigned_count": 1,
+                    "spatial_count": 1,
+                    "source_count": 1,
+                    "source_names": "lasd_2024",
+                    "spatial_assignment_share": 1.0,
+                },
+                {
+                    "zcta": "90650",
+                    "assigned_count": 200,
+                    "spatial_count": 200,
+                    "source_count": 1,
+                    "source_names": "lasd_2024",
+                    "spatial_assignment_share": 1.0,
+                },
+            ]
+        ),
+    }
+
+    indexed = build_index_dataframe(annual, load_settings())
+    indexed = indexed.drop(
+        columns=[
+            "coverage_status",
+            "data_source_type",
+            "source_names",
+            "source_count",
+            "assigned_incident_count",
+            "spatial_incident_count",
+            "data_coverage_score",
+            "confidence_grade",
+        ],
+        errors="ignore",
+    )
+    from crime_index.transform.index import _apply_quality_metrics, calculate_confidence_grade
+
+    indexed = _apply_quality_metrics(indexed, coverage, load_settings())
+    indexed = calculate_confidence_grade(indexed)
+
+    partial = indexed[indexed["zcta"] == "92336"].iloc[0]
+    complete = indexed[indexed["zcta"] == "90650"].iloc[0]
+    assert partial["coverage_status"] == "partial_observed"
+    assert partial["confidence_grade"] == "D"
+    assert "partial_observed_high_population_low_incident_count" in partial["score_notes"]
+    assert complete["coverage_status"] == "observed"
+
+
 def _row(zcta: str, population: int | None, violent: int, property: int, total: int) -> dict[str, object]:
     return {
         "zcta": zcta,

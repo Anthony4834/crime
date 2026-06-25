@@ -27,6 +27,9 @@ violent:
       - sexual misconduct
       - enticement of a minor
       - sex abuse
+      - sexual exploitation
+      - sexual conduct with minor
+      - commercial sexual exploitation
   robbery:
     keywords:
       - robbery
@@ -44,6 +47,9 @@ violent:
       - threats to do bodily harm
       - threatening phone calls
       - child abuse
+      - child adult abuse
+      - vulnerable adult abuse
+      - exploit of child
       - child annoying
       - crime against child
       - crm agnst chld
@@ -62,8 +68,11 @@ violent:
       - offense involving children
       - offenses related to children
       - child abandonment
+      - aband end child
       - endangering children
       - interference with custody
+      - interference with child custody
+      - custodial interference
       - offences against the family and children
       - family offenses nonviolent
       - felony assault
@@ -84,10 +93,17 @@ violent:
       - strangulation
       - abduction
       - unlawful restraint
+      - unlawful imprisonment
       - gunshot wound victims
       - asslt
       - threat of mass violence
+      - terroristic threat
+      - threats dv
       - family offense
+      - continuous violence against family
+      - injury child
+      - injury elderly
+      - injury child elderly
 
 property:
   burglary:
@@ -115,10 +131,12 @@ property:
       - grand larceny
       - other offenses related to theft
       - thefts
+      - thft
       - theft from vehicle
       - theft from building
       - all other larceny
       - theft of motor vehicle parts
+      - vehicle burglary
       - receiving stolen property
       - pocket picking
       - pocket-picking
@@ -152,6 +170,8 @@ property:
       - unauthorized use of a vehicle
       - unauthorized use of motor vehicle
       - theft of vehicle
+      - grand theft auto
+      - grand theft vehicle
   arson:
     keywords:
       - arson
@@ -163,6 +183,7 @@ property:
       - destruction damage vandalism of property
       - damage prop
       - damage to property
+      - damage of property
       - damage vandalism of property
       - reckless burning
   fraud:
@@ -189,6 +210,7 @@ property:
       - identity theft
       - impersonation
       - hacking computer invasion
+      - computer security breach
       - forgery and counterfeiting
       - fraudulent accosting
       - bad checks
@@ -200,6 +222,8 @@ property:
       - false pretenses swindle
       - credit card automatic teller
       - fraudulent use of a credit device
+      - fraudulent use of credit cards
+      - credit debit card abuse
       - credit card fraudulent use
       - counterfeiting of
       - pass counterfeited
@@ -207,10 +231,14 @@ property:
       - forge simulate
       - stealing from building
       - stealing from auto
+      - misapp fiduc
       - property damage
       - tampering
       - burning or exploding
       - destruction damage vandalism of property
+      - crim misch
+      - crim misc
+      - reckless damage
 
 drug:
   drug_offense:
@@ -228,6 +256,10 @@ drug:
       - drugs
       - drug narcotic violations
       - marijuana possess
+      - poss marij
+      - poss cs
+      - man del cs
+      - del marij
       - marijuana sell
       - possession of a controlled sub
       - poss w int cont sub
@@ -256,6 +288,8 @@ weapons:
       - weapons law violations
       - weapon violations
       - weap
+      - prohibited possesser
+      - selling weapons
       - improperly discharging firearm
       - shotspotter activation
 
@@ -272,6 +306,7 @@ public_order:
       - violation of court order
       - restraining order
       - violate protection order
+      - protective order
       - contempt of court
       - failure to yield
       - reckless driving
@@ -289,6 +324,7 @@ public_order:
       - all other offenses
       - interference with public officer
       - liquor law violation
+      - liquor violation
       - gambling
       - betting wagering
       - obscenity
@@ -308,12 +344,16 @@ public_order:
       - license premise violation
       - liquor alcohol drinking in public
       - traffic collision
+      - collision involving
       - vehicle and traffic laws
       - intoxicated impaired driving
       - driving under the influence
       - lewd
       - indecent exposure
       - public indecency
+      - public sexual indecency
+      - public lewdness
+      - obscene material
       - prowler
       - harassment
       - harrassment
@@ -339,6 +379,8 @@ public_order:
       - fail comply order
       - fail comply order signal
       - illegal dumping
+      - camping public places
+      - unauthorized camping
       - drunkenness
       - verbal dispute
       - violation of auto law
@@ -371,6 +413,7 @@ public_order:
       - warrant arrest
       - violation of full order of protection
       - violation of ex parte order of protection
+      - order of protection violation
       - service of an ex parte order of protection
       - service of a full order of protection
       - obstructing and resisting an officer
@@ -379,9 +422,14 @@ public_order:
       - commercial sex acts
       - curfew loitering vargancy violations
       - curfew loitering vagrancy violations
+      - curfew
       - terroristic threats
       - driving while suspended
       - driving while revoked
+      - dui
+      - aggravated dui
+      - dwi
+      - driving while intoxicated
       - alcohol influence report
       - contempt violation of protection order
       - criminal contempt violation of order of protection
@@ -389,6 +437,42 @@ public_order:
       - threat to bomb
       - regis plates alter forge falsify
       - vehicle offense criminal attempt
+      - fail id
+      - evading arrest
+      - evading arrest detention
+      - interfer w public duties
+      - interfer w public
+      - interfer emergency
+      - interfer w emergency
+      - interfering with emergency
+      - tamper fab
+      - tamper/fab
+      - fail to comply sex off
+      - solicitation
+      - aggressive panhandling
+      - obstructing highway
+      - driving while lic invld
+      - driver license id false
+      - racing on highway
+      - open container
+      - impersonate public servant
+      - littering
+      - class c warrants
+      - local class c warrants
+      - publish intimate vis
+      - threat to publish intimate
+      - obstruction or retaliation
+      - obstruct retaliation
+      - tracking device
+      - flee police officer
+      - fleeing police officer
+      - prohibited sub item in corr facility
+      - duty strike structure
+      - refusal to identify
+      - graffitt
+      - concealed carry violation
+      - false report
+      - false reprt
 
 other:
   other:
@@ -413,6 +497,7 @@ other:
       - suicide
       - animal offenses
       - animal cruelty
+      - cruelty non-livestock
       - not reportable to nibrs
       - not reportable
       - runaway

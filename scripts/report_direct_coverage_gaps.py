@@ -28,14 +28,20 @@ def main() -> None:
           SELECT zcta, population_total
           FROM read_csv_auto($universe)
         ),
+        observed_file AS (
+          SELECT zcta, coverage_status
+          FROM read_csv_auto($observed)
+        ),
         observed AS (
           SELECT DISTINCT zcta
-          FROM read_csv_auto($observed)
+          FROM observed_file
+          WHERE coalesce(coverage_status, 'observed') = 'observed'
         )
         SELECT
           count(*) AS universe_rows,
           count(*) FILTER (WHERE population_total > 0) AS populated_rows,
           (SELECT count(*) FROM observed) AS observed_rows,
+          (SELECT count(DISTINCT zcta) FROM observed_file WHERE coverage_status = 'partial_observed') AS partial_rows,
           count(*) - (SELECT count(*) FROM observed) AS missing_rows,
           count(*) FILTER (WHERE population_total > 0)
             - (SELECT count(*) FROM observed) AS missing_populated_rows,
@@ -62,6 +68,7 @@ def main() -> None:
         observed AS (
           SELECT DISTINCT zcta
           FROM read_csv_auto($observed)
+          WHERE coalesce(coverage_status, 'observed') = 'observed'
         ),
         zstate AS (
           SELECT
@@ -110,6 +117,7 @@ def main() -> None:
         observed AS (
           SELECT DISTINCT zcta
           FROM read_csv_auto($observed)
+          WHERE coalesce(coverage_status, 'observed') = 'observed'
         ),
         zstate AS (
           SELECT
@@ -163,6 +171,7 @@ def main() -> None:
         observed AS (
           SELECT DISTINCT zcta
           FROM read_csv_auto($observed)
+          WHERE coalesce(coverage_status, 'observed') = 'observed'
         ),
         zstate AS (
           SELECT
@@ -241,6 +250,7 @@ def print_report(
         universe_rows,
         populated_rows,
         observed_rows,
+        partial_rows,
         missing_rows,
         missing_populated_rows,
         population_total,
@@ -254,6 +264,7 @@ def print_report(
     print(f"- Universe rows: {fmt(universe_rows)}")
     print(f"- Populated universe rows: {fmt(populated_rows)}")
     print(f"- Direct observed ZCTAs: {fmt(observed_rows)}")
+    print(f"- Partial direct rows excluded from covered counts: {fmt(partial_rows)}")
     print(f"- Missing rows, including zero-population rows: {fmt(missing_rows)}")
     print(f"- Missing populated ZCTAs: {fmt(missing_populated_rows)}")
     print(f"- Observed population: {fmt(observed_population)}")

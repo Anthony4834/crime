@@ -1,8 +1,46 @@
 import pandas as pd
 
 from crime_index.db import get_connection
+from crime_index.ingest.crime_loader import apply_row_filters
 from crime_index.ingest.crime_loader import build_staged_incidents
 from crime_index.ingest.crime_loader import ingest_crime
+from crime_index.ingest.crime_loader import read_tabular_file
+
+
+def test_read_tabular_file_supports_configured_csv_options(tmp_path) -> None:
+    source = tmp_path / "incidents.csv"
+    source.write_text("zip,offense\n00123,THEFT\nbad,row,extra\n", encoding="utf-8")
+
+    df = read_tabular_file(source, {"dtype": "str", "on_bad_lines": "skip"})
+
+    assert df.to_dict("records") == [{"zip": "00123", "offense": "THEFT"}]
+
+
+def test_apply_row_filters_supports_include_and_exclude_rules() -> None:
+    df = pd.DataFrame(
+        [
+            {"year": "2024", "code": "THEFT", "description": "Bike Theft"},
+            {"year": "2024", "code": "NONCRIM", "description": "Welfare Check"},
+            {"year": "2024", "code": "BURGLARY", "description": "Residential Burglary"},
+            {"year": "2023", "code": "ROBBERY", "description": "Robbery"},
+        ]
+    )
+
+    filtered = apply_row_filters(
+        df,
+        {
+            "include": [{"column": "year", "values": ["2024"]}],
+            "exclude": [
+                {"column": "code", "values": ["noncrim"]},
+                {"column": "description", "regex": "welfare|traffic"},
+            ],
+        },
+    )
+
+    assert filtered.to_dict("records") == [
+        {"year": "2024", "code": "THEFT", "description": "Bike Theft"},
+        {"year": "2024", "code": "BURGLARY", "description": "Residential Burglary"},
+    ]
 
 
 def test_build_staged_incidents_supports_day_of_year_and_point_wkt() -> None:
@@ -35,6 +73,33 @@ def test_build_staged_incidents_supports_day_of_year_and_point_wkt() -> None:
     assert row["occurred_date"].isoformat() == "2024-06-07"
     assert row["latitude_raw"] == 32.660977013
     assert row["longitude_raw"] == -96.88994197
+
+
+def test_build_staged_incidents_supports_parenthesized_lat_lon_points() -> None:
+    df = pd.DataFrame(
+        [
+            {
+                "id": "1",
+                "date": "2024-03-02T13:47:00",
+                "offense": "THEFT",
+                "point": "(32.637238995307605, -97.393977584559693)",
+            }
+        ]
+    )
+    staged = build_staged_incidents(
+        df,
+        "test",
+        {
+            "incident_id_column": "id",
+            "date_column": "date",
+            "offense_column": "offense",
+            "geocoded_point_column": "point",
+        },
+    )
+
+    row = staged.iloc[0]
+    assert row["latitude_raw"] == 32.637238995307605
+    assert row["longitude_raw"] == -97.393977584559693
 
 
 def test_build_staged_incidents_uses_offense_fallback_columns() -> None:

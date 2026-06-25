@@ -267,7 +267,7 @@ Confidence grades consider population availability, population size, assignment 
 
 - `A`: strong spatial assignment, population present, enough incidents, population at least 1,000.
 - `B`: good spatial assignment, population present, population at least 500.
-- `C`: usable but lower stability, often because of low incident counts or fallback assignment.
+- `C`: usable but lower stability, often because of low incident counts or direct source-ZIP assignment.
 - `D`: missing population, very low population, or poor coverage.
 
 Small counts are retained but marked in `score_notes`.
@@ -301,7 +301,7 @@ The modeled baseline uses the BJS 2024 national offense rates from *Crime Known 
 
 The county and modeled outputs are retained as offline analytical artifacts only. They are not published as ZIP API responses because county averages and national baselines can be misleading for individual ZIPs, cities, and small high-variance places.
 
-After the latest local rebuild, the public static API publishes 1,265 direct observed ZCTAs from twenty-one local incident feeds. ZIPs outside that direct observed set return no API record instead of falling back to county or national modeled values.
+After the latest local rebuild, the public static API publishes 1,701 direct observed ZCTAs from twenty-nine local incident feeds. ZIPs outside that direct observed set return no API record instead of falling back to county or national modeled values.
 
 - LAPD 2024 public crime incidents.
 - Chicago 2024 public crime incidents.
@@ -324,8 +324,16 @@ After the latest local rebuild, the public static API publishes 1,265 direct obs
 - Charlotte-Mecklenburg Police Department 2024 incidents, excluding records marked `UNFOUNDED` and NIBRS 800-series non-criminal reports.
 - San Diego Police Department 2024 NIBRS crime offenses.
 - Detroit Police Department 2024 RMS crime incidents, excluding records marked `UNFOUNDED`.
+- Los Angeles County Sheriff's Department 2024 Part I and II crimes.
+- San Antonio Police Department 2024 SAPD Offenses.
+- Austin Police Department 2024 NIBRS Group A offenses.
+- Jacksonville Sheriff's Office 2024 NIBRS incident layer.
+- Atlanta Police Department 2024 open-data crime layer.
+- Phoenix Police Department 2024 CKAN crime data.
+- Chandler Police Department 2024 general offenses, filtering unfounded, non-crime, traffic, collision, runaway, and ambiguous source buckets.
+- Fort Worth Police Department 2024 crime data table.
 
-All twenty-one are configured in `config/sources.yaml` with `download` blocks, so `python -m crime_index.cli download-sources` can recreate the raw files.
+All twenty-nine are configured in `config/sources.yaml` with `download` blocks, so `python -m crime_index.cli download-sources` can recreate the raw files.
 
 ## Path To Full-US Indexed Coverage
 

@@ -13,6 +13,7 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
             [
                 "zcta,year,comparison_scope,population_total,is_modeled,overall_crime_score_0_100,coverage_status,data_source_type",
                 "601,2024,source_universe,1000,False,42.5,observed,observed",
+                "602,2024,source_universe,1000,False,5.0,partial_observed,observed",
             ]
         ),
         encoding="utf-8",

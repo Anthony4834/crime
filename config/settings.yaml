@@ -52,6 +52,8 @@ index:
   low_population_threshold: 500
   preferred_population_threshold: 1000
   low_count_threshold: 5
+  high_population_partial_threshold: 50000
+  min_high_population_observed_incidents: 20
 
 score_model:
   default_model: percentile
