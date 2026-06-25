@@ -18,6 +18,16 @@ population:
   default_file: data/raw/census/census_reporter_acs2024_zcta_population_us.csv
   default_year: 2024
 
+zip_county_mapping:
+  default_file: data/raw/geography/tab20_zcta520_county20_natl.txt
+
+fbi_cde:
+  api_base: https://api.usa.gov/crime/fbi/cde
+  api_key_env: FBI_CDE_API_KEY
+  agency_cache_dir: data/raw/fbi_cde/agencies
+  request_delay_seconds: 0.05
+  cius_collection: offenses-known-to-le
+
 aggregation:
   include_population_only_zctas: false
 

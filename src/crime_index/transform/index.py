@@ -219,6 +219,7 @@ def build_index_dataframe(
     output = calculate_confidence_grade(output)
     output["created_at"] = utc_now_naive()
     output["comparison_scope_value"] = output["comparison_scope_value"].fillna("")
+    output = _ensure_index_columns(output)
     return output[_index_columns()]
 
 
@@ -488,6 +489,12 @@ def _index_columns() -> list[str]:
         "assigned_incident_count",
         "spatial_incident_count",
         "is_modeled",
+        "observed_level",
+        "county_fips",
+        "county_name",
+        "county_count",
+        "county_components",
+        "allocation_method",
         "data_coverage_score",
         "confidence_grade",
         "score_notes",
@@ -501,6 +508,29 @@ def _index_columns() -> list[str]:
         "overall_crime_score_label",
         "created_at",
     ]
+
+
+def _ensure_index_columns(df: pd.DataFrame) -> pd.DataFrame:
+    output = df.copy()
+    defaults: dict[str, object] = {
+        "observed_level": "",
+        "county_fips": "",
+        "county_name": "",
+        "county_count": 0,
+        "county_components": "",
+        "allocation_method": "",
+    }
+    for column, default in defaults.items():
+        if column not in output:
+            output[column] = default
+        else:
+            output[column] = output[column].fillna(default)
+    if "coverage_status" in output:
+        missing_observed_level = output["observed_level"].astype(str).str.strip() == ""
+        output.loc[missing_observed_level & (output["coverage_status"] == "observed"), "observed_level"] = "zcta"
+        output.loc[missing_observed_level & (output["coverage_status"] == "national_modeled"), "observed_level"] = ""
+    output["county_count"] = pd.to_numeric(output["county_count"], errors="coerce").fillna(0).astype("int64")
+    return output
 
 
 def _insert_df(con: duckdb.DuckDBPyConnection, table: str, df: pd.DataFrame) -> None:

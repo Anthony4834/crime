@@ -9,6 +9,9 @@ import pandas as pd
 from crime_index.db import get_connection, init_db
 from crime_index.utils.time_utils import utc_now_naive
 
+COUNTY_OBSERVED_SCOPE = "county_observed_allocated"
+COUNTY_SOURCE_NAME = "fbi_cde_cius_offenses_known"
+
 
 def load_source_coverage(
     sources: dict[str, dict[str, Any]],
@@ -80,18 +83,47 @@ def build_national_coverage(
             [year],
         ).fetchdf()
         output = population.merge(incident_coverage, on="zcta", how="left")
+        county_coverage = con.execute(
+            """
+            SELECT
+                zcta,
+                coalesce(county_count, 1) AS county_source_count,
+                coalesce(source_names, ?) AS county_source_names
+            FROM zcta_crime_index
+            WHERE year = ?
+              AND comparison_scope = ?
+              AND coverage_status = ?
+            """,
+            [COUNTY_SOURCE_NAME, year, COUNTY_OBSERVED_SCOPE, COUNTY_OBSERVED_SCOPE],
+        ).fetchdf()
+        if not county_coverage.empty:
+            output = output.merge(county_coverage, on="zcta", how="left")
+        else:
+            output["county_source_count"] = pd.NA
+            output["county_source_names"] = pd.NA
+
         output["source_count"] = output["source_count"].fillna(0).astype("int64")
         output["assigned_incident_count"] = output["assigned_incident_count"].fillna(0).astype("int64")
         output["spatial_incident_count"] = output["spatial_incident_count"].fillna(0).astype("int64")
         output["source_names"] = output["source_names"].fillna("")
-        output["coverage_status"] = output["assigned_incident_count"].map(
-            lambda count: "observed" if int(count) > 0 else "national_modeled"
+        direct_observed = output["assigned_incident_count"].astype("int64") > 0
+        county_observed = output["county_source_count"].notna() & ~direct_observed
+        output.loc[county_observed, "source_count"] = (
+            pd.to_numeric(output.loc[county_observed, "county_source_count"], errors="coerce").fillna(1).astype("int64")
         )
-        output["data_source_type"] = output["assigned_incident_count"].map(
-            lambda count: "observed" if int(count) > 0 else "modeled"
+        output.loc[county_observed, "source_names"] = output.loc[county_observed, "county_source_names"].fillna(
+            COUNTY_SOURCE_NAME
         )
-        output["coverage_notes"] = output["assigned_incident_count"].map(
-            lambda count: None if int(count) > 0 else "No local incident source loaded for this ZCTA/year."
+        output["coverage_status"] = "national_modeled"
+        output.loc[direct_observed, "coverage_status"] = "observed"
+        output.loc[county_observed, "coverage_status"] = COUNTY_OBSERVED_SCOPE
+        output["data_source_type"] = output["coverage_status"].map(
+            lambda status: "modeled" if status == "national_modeled" else "observed"
+        )
+        output["coverage_notes"] = "No local incident source or county-observed source loaded for this ZCTA/year."
+        output.loc[direct_observed, "coverage_notes"] = None
+        output.loc[county_observed, "coverage_notes"] = (
+            "FBI CDE CIUS county-observed data allocated to ZCTA using Census ZCTA-county relationship weights."
         )
         output["created_at"] = utc_now_naive()
         con.execute("DELETE FROM zcta_national_coverage WHERE year = ?", [year])

@@ -20,8 +20,12 @@ from crime_index.geo.zcta_assignment import assign_zctas as assign_zctas_stage
 from crime_index.ingest.census_loader import load_population as load_population_stage
 from crime_index.ingest.census_reporter import fetch_census_reporter_zcta_population
 from crime_index.ingest.crime_loader import ingest_crime as ingest_crime_stage
+from crime_index.ingest.fbi_cde import download_cius_offenses_known as download_cius_offenses_known_stage
+from crime_index.ingest.fbi_cde import load_cius_offenses_known as load_cius_offenses_known_stage
+from crime_index.ingest.fbi_cde import load_fbi_cde_agencies as load_fbi_cde_agencies_stage
 from crime_index.ingest.geography_loader import load_geography as load_geography_stage
 from crime_index.ingest.source_downloader import download_configured_sources
+from crime_index.ingest.zip_county_loader import load_zip_county_mapping as load_zip_county_mapping_stage
 from crime_index.logging_config import configure_logging
 from crime_index.modeling import build_modeled_baseline
 from crime_index.normalize.normalize_crime import normalize_crime as normalize_crime_stage
@@ -29,6 +33,9 @@ from crime_index.quality.profiling import profile as profile_stage
 from crime_index.static_bundle import build_static_bundle as build_static_bundle_stage
 from crime_index.static_bundle import check_static_cors as check_static_cors_stage
 from crime_index.transform.aggregate import aggregate_crime
+from crime_index.transform.county_allocation import COUNTY_OBSERVED_SCOPE
+from crime_index.transform.county_allocation import build_county_crime_annual as build_county_crime_annual_stage
+from crime_index.transform.county_allocation import build_county_observed_layer as build_county_observed_layer_stage
 from crime_index.transform.index import build_index as build_index_stage
 from crime_index.utils.time_utils import utc_now_naive
 
@@ -45,6 +52,11 @@ REBUILD_OUTPUT_TABLES = [
     "zcta_crime_monthly",
     "zcta_crime_index",
     "zcta_national_coverage",
+    "zip_county_mapping",
+    "fbi_cde_agencies",
+    "fbi_cde_cius_agency_offenses",
+    "county_crime_annual",
+    "zcta_county_crime_allocation",
 ]
 
 
@@ -117,6 +129,58 @@ def fetch_census_reporter_population(
 ) -> None:
     result = fetch_census_reporter_zcta_population(output, release)
     _print_mapping("Census Reporter population fetch", result)
+
+
+@app.command("load-zip-county-mapping")
+def load_zip_county_mapping(
+    file: Path | None = typer.Option(None, "--file", help="ZIP/ZCTA to county mapping TSV/CSV/Parquet."),
+) -> None:
+    settings = load_settings()
+    file = file or Path(settings.get("zip_county_mapping", {}).get("default_file", "data/raw/geography/zip_county_mapping.tsv"))
+    row_count = load_zip_county_mapping_stage(file)
+    console.print(f"[green]Loaded {row_count} ZIP-county mapping rows.[/green]")
+
+
+@app.command("download-cius-offenses-known")
+def download_cius_offenses_known(
+    year: int = typer.Option(..., "--year"),
+    force: bool = typer.Option(False, "--force", help="Overwrite the local CIUS ZIP."),
+) -> None:
+    path = download_cius_offenses_known_stage(year, force=force)
+    console.print(f"[green]Downloaded CIUS offenses package to {path}.[/green]")
+
+
+@app.command("load-fbi-cde-agencies")
+def load_fbi_cde_agencies(
+    state: list[str] | None = typer.Option(None, "--state", help="State abbreviation. Can be repeated."),
+    force: bool = typer.Option(False, "--force", help="Refresh agency metadata cache."),
+) -> None:
+    row_count = load_fbi_cde_agencies_stage(states=state, force=force)
+    console.print(f"[green]Loaded {row_count} FBI CDE agency rows.[/green]")
+
+
+@app.command("load-cius-offenses-known")
+def load_cius_offenses_known(
+    year: int = typer.Option(..., "--year"),
+    file: Path | None = typer.Option(None, "--file", help="Downloaded CIUS offenses-known ZIP."),
+) -> None:
+    row_count = load_cius_offenses_known_stage(year, zip_path=file)
+    console.print(f"[green]Loaded {row_count} CIUS agency offense rows.[/green]")
+
+
+@app.command("build-county-crime-annual")
+def build_county_crime_annual(year: int = typer.Option(..., "--year")) -> None:
+    row_count = build_county_crime_annual_stage(year)
+    console.print(f"[green]Built {row_count} county annual crime rows.[/green]")
+
+
+@app.command("build-county-observed-layer")
+def build_county_observed_layer(
+    year: int = typer.Option(..., "--year"),
+    scope: str = typer.Option(COUNTY_OBSERVED_SCOPE, "--scope"),
+) -> None:
+    row_count = build_county_observed_layer_stage(year, comparison_scope=scope)
+    console.print(f"[green]Built {row_count} county-observed ZIP score rows.[/green]")
 
 
 @app.command("load-source-coverage")
@@ -215,41 +279,66 @@ def run_all(
     geography_file = Path(settings.get("geography", {}).get("default_file", "data/raw/geography/sample_zcta.geojson"))
     geography_year = int(settings.get("geography", {}).get("default_year", 2024))
     population_file = Path(settings.get("population", {}).get("default_file", "data/raw/census/sample_acs_zcta_population.csv"))
+    zip_county_file = Path(
+        settings.get("zip_county_mapping", {}).get("default_file", "data/raw/geography/zip_county_mapping.tsv")
+    )
     command = f"run-all --year {year} --scope {scope} --config {sources_config}"
 
     run_id = _start_pipeline_run(command, settings)
     try:
         init_database()
-        console.print("[cyan]1/14 initialized database[/cyan]")
+        console.print("[cyan]1/21 initialized database[/cyan]")
         _clear_rebuild_outputs()
+        zip_county_count = load_zip_county_mapping_stage(zip_county_file)
+        console.print(f"[cyan]2/21 loaded ZIP-county mapping: {zip_county_count} rows[/cyan]")
         ingest_results = ingest_crime_stage(sources_config)
-        console.print(f"[cyan]2/14 ingested crime: {ingest_results}[/cyan]")
+        console.print(f"[cyan]3/21 ingested crime: {ingest_results}[/cyan]")
         source_coverage_count = load_source_coverage(load_sources(sources_config))
-        console.print(f"[cyan]3/14 loaded source coverage: {source_coverage_count} rows[/cyan]")
+        console.print(f"[cyan]4/21 loaded source coverage: {source_coverage_count} rows[/cyan]")
         normalized_count = normalize_crime_stage(settings=settings)
-        console.print(f"[cyan]4/14 normalized crime: {normalized_count} rows[/cyan]")
+        console.print(f"[cyan]5/21 normalized crime: {normalized_count} rows[/cyan]")
         geography_count = load_geography_stage(geography_file, geography_year, settings=settings)
-        console.print(f"[cyan]5/14 loaded geography: {geography_count} rows[/cyan]")
+        console.print(f"[cyan]6/21 loaded geography: {geography_count} rows[/cyan]")
         assignment_summary = assign_zctas_stage(settings=settings)
-        console.print(f"[cyan]6/14 assigned ZCTAs: {assignment_summary}[/cyan]")
+        console.print(f"[cyan]7/21 assigned ZCTAs: {assignment_summary}[/cyan]")
         population_count = load_population_stage(population_file, year)
-        console.print(f"[cyan]7/14 loaded population: {population_count} rows[/cyan]")
+        console.print(f"[cyan]8/21 loaded population: {population_count} rows[/cyan]")
         aggregate_summary = aggregate_crime(year, settings=settings)
-        console.print(f"[cyan]8/14 aggregated: {aggregate_summary}[/cyan]")
+        console.print(f"[cyan]9/21 aggregated: {aggregate_summary}[/cyan]")
         index_count = build_index_stage(year, scope, settings=settings)
-        console.print(f"[cyan]9/14 built observed scores: {index_count} rows[/cyan]")
+        console.print(f"[cyan]10/21 built observed scores: {index_count} rows[/cyan]")
+        agency_count = load_fbi_cde_agencies_stage(settings=settings)
+        console.print(f"[cyan]11/21 loaded FBI CDE agencies: {agency_count} rows[/cyan]")
+        cius_path = download_cius_offenses_known_stage(year)
+        console.print(f"[cyan]12/21 downloaded CIUS offenses package: {cius_path}[/cyan]")
+        cius_count = load_cius_offenses_known_stage(year, zip_path=cius_path)
+        console.print(f"[cyan]13/21 loaded CIUS offense rows: {cius_count} rows[/cyan]")
+        county_count = build_county_crime_annual_stage(year)
+        console.print(f"[cyan]14/21 built county annual crime: {county_count} rows[/cyan]")
+        county_layer_count = build_county_observed_layer_stage(year, comparison_scope=COUNTY_OBSERVED_SCOPE, settings=settings)
+        console.print(f"[cyan]15/21 built county-observed ZIP scores: {county_layer_count} rows[/cyan]")
         coverage_count = build_national_coverage(year)
         coverage_exports = export_national_coverage(year)
-        console.print(f"[cyan]10/14 built national coverage: {coverage_count} rows {coverage_exports}[/cyan]")
+        console.print(f"[cyan]16/21 built national coverage: {coverage_count} rows {coverage_exports}[/cyan]")
         modeled_scope = settings.get("modeled_baseline", {}).get("comparison_scope", "national_modeled_baseline")
         modeled_count = build_modeled_baseline(year, comparison_scope=modeled_scope, settings=settings)
-        console.print(f"[cyan]11/14 built modeled baseline: {modeled_count} rows[/cyan]")
+        console.print(f"[cyan]17/21 built modeled baseline: {modeled_count} rows[/cyan]")
         profile_result = profile_stage(year)
-        console.print(f"[cyan]12/14 profiled: {profile_result['files']}[/cyan]")
+        console.print(f"[cyan]18/21 profiled: {profile_result['files']}[/cyan]")
         written = export_outputs(year, comparison_scope=scope)
-        console.print(f"[cyan]13/14 exported observed scores: {written}[/cyan]")
+        console.print(f"[cyan]19/21 exported observed scores: {written}[/cyan]")
+        county_written = export_outputs(year, comparison_scope=COUNTY_OBSERVED_SCOPE)
+        console.print(f"[cyan]20/21 exported county-observed scores: {county_written}[/cyan]")
         modeled_written = export_outputs(year, comparison_scope=modeled_scope)
-        console.print(f"[cyan]14/14 exported modeled scores: {modeled_written}[/cyan]")
+        console.print(f"[cyan]21/21 exported modeled scores: {modeled_written}[/cyan]")
+        static_output = Path(settings.get("static_bundle", {}).get("output_dir", "data/server"))
+        manifest = build_static_bundle_stage(
+            export_dir=Path("data/exports"),
+            output_dir=static_output,
+            years=[year],
+            allowed_origins=settings.get("static_bundle", {}).get("allowed_origins", []),
+        )
+        console.print(f"[cyan]built static bundle: {manifest['years'].get(str(year), {})}[/cyan]")
         _complete_pipeline_run(run_id, "completed", "run-all completed")
     except Exception as exc:
         _complete_pipeline_run(run_id, "failed", str(exc))

@@ -15,12 +15,14 @@ SCORES_FILE_PATTERN = re.compile(r"^zcta_crime_scores_(?P<year>\d{4})(?:_(?P<sco
 COVERAGE_FILE_PATTERN = re.compile(r"^zcta_national_coverage_(?P<year>\d{4})\.csv$")
 COMBINED_SCOPE = "national_combined"
 OBSERVED_SCOPE = "source_universe"
+COUNTY_SCOPE = "county_observed_allocated"
 MODELED_SCOPE = "national_modeled_baseline"
 
 INT_FIELDS = {
     "year",
     "population_total",
     "source_count",
+    "county_count",
     "assigned_incident_count",
     "spatial_incident_count",
     "total_crime_count",
@@ -33,6 +35,36 @@ INT_FIELDS = {
     "unknown_crime_count",
 }
 BOOL_FIELDS = {"is_modeled", "is_modelled"}
+COUNT_FIELDS = [
+    "total_crime_count",
+    "violent_crime_count",
+    "property_crime_count",
+    "drug_crime_count",
+    "public_order_crime_count",
+    "weapons_crime_count",
+    "other_crime_count",
+    "unknown_crime_count",
+]
+SCORE_FIELDS = [
+    "overall_crime_score_0_100",
+    "violent_score_0_100",
+    "property_score_0_100",
+    "drug_score_0_100",
+    "public_order_score_0_100",
+    "weapons_score_0_100",
+    "other_score_0_100",
+    "total_crime_score_0_100",
+]
+RATE_FIELDS = {
+    "total_crime_count": "total_rate_per_1000",
+    "violent_crime_count": "violent_rate_per_1000",
+    "property_crime_count": "property_rate_per_1000",
+    "drug_crime_count": "drug_rate_per_1000",
+    "public_order_crime_count": "public_order_rate_per_1000",
+    "weapons_crime_count": "weapons_rate_per_1000",
+    "other_crime_count": "other_rate_per_1000",
+    "unknown_crime_count": "unknown_rate_per_1000",
+}
 
 
 def build_static_bundle(
@@ -153,13 +185,15 @@ def _write_combined_scopes(
     years = sorted({year for year, _ in score_records})
     for year in years:
         observed = score_records.get((year, OBSERVED_SCOPE))
+        county = score_records.get((year, COUNTY_SCOPE))
         modeled = score_records.get((year, MODELED_SCOPE))
-        if not observed or not modeled:
+        if not modeled and not county and not observed:
             continue
 
-        by_zcta = {str(record["zcta"]): dict(record) for record in modeled}
-        for record in observed:
-            by_zcta[str(record["zcta"])] = dict(record)
+        by_zcta: dict[str, dict[str, Any]] = {}
+        for layer in [modeled or [], county or [], observed or []]:
+            for record in layer:
+                by_zcta[str(record["zcta"])] = dict(record)
 
         records = [by_zcta[zcta] for zcta in sorted(by_zcta)]
         for record in records:
@@ -187,6 +221,7 @@ def _write_combined_scopes(
             "data_source_type_counts": _counts(records, "data_source_type"),
         }
         year_entry["zip_api"] = _write_zip_api(output_dir, year, records)
+        year_entry["county_api"] = _write_county_api(output_dir, year, records)
 
 
 def _write_zip_api(output_dir: Path, year: str, records: list[dict[str, Any]]) -> dict[str, Any]:
@@ -204,6 +239,174 @@ def _write_zip_api(output_dir: Path, year: str, records: list[dict[str, Any]]) -
         "path_template": f"{base_path.as_posix()}/{{zip}}.json",
         "row_count": len(records),
     }
+
+
+def _write_county_api(output_dir: Path, year: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+    base_path = Path("api") / "v1" / year / "counties"
+    by_county: dict[str, list[dict[str, Any]]] = {}
+    county_names: dict[str, str] = {}
+    for record in records:
+        for county_fips, county_name in _record_counties(record):
+            by_county.setdefault(county_fips, []).append(record)
+            if county_name:
+                county_names[county_fips] = county_name
+
+    for county_fips, county_records in sorted(by_county.items()):
+        unique_records = _dedupe_static_records(county_records)
+        payload = _summarize_static_group(
+            unique_records,
+            {
+                "api_version": "v1",
+                "analysis_type": "county_zip_group",
+                "year": int(year),
+                "county_fips": county_fips,
+                "county_name": county_names.get(county_fips, ""),
+                "member_zips": [str(record["zcta"]).zfill(5) for record in unique_records],
+                "member_zip_count": len(unique_records),
+                "api_path": f"/{base_path.as_posix()}/{county_fips}.json",
+                "members": unique_records,
+            },
+        )
+        _write_json(output_dir / base_path / f"{county_fips}.json", payload)
+
+    return {
+        "scope": COMBINED_SCOPE,
+        "path_template": f"{base_path.as_posix()}/{{county_fips}}.json",
+        "row_count": len(by_county),
+    }
+
+
+def _record_counties(record: dict[str, Any]) -> list[tuple[str, str]]:
+    components = _parse_county_components(record.get("county_components"))
+    if components:
+        return components
+    county_fips = str(record.get("county_fips") or "").strip()
+    county_name = str(record.get("county_name") or "").strip()
+    if not county_fips:
+        return []
+    fips_values = [value for value in county_fips.split("|") if value]
+    name_values = [value for value in county_name.split("|") if value]
+    counties: list[tuple[str, str]] = []
+    for index, fips in enumerate(fips_values):
+        counties.append((fips, name_values[index] if index < len(name_values) else ""))
+    return counties
+
+
+def _parse_county_components(value: object) -> list[tuple[str, str]]:
+    if not value:
+        return []
+    try:
+        components = json.loads(str(value))
+    except json.JSONDecodeError:
+        return []
+    counties: list[tuple[str, str]] = []
+    if isinstance(components, list):
+        for component in components:
+            if not isinstance(component, dict):
+                continue
+            county_fips = str(component.get("county_fips") or "").strip()
+            county_name = str(component.get("county_name") or "").strip()
+            if county_fips:
+                counties.append((county_fips, county_name))
+    return counties
+
+
+def _dedupe_static_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_zcta = {str(record.get("zcta")).zfill(5): record for record in records if record.get("zcta")}
+    return [by_zcta[zcta] for zcta in sorted(by_zcta)]
+
+
+def _summarize_static_group(records: list[dict[str, Any]], base: dict[str, Any]) -> dict[str, Any]:
+    population_total = _sum_numeric(records, "population_total")
+    counts: dict[str, int | None] = {}
+    rates: dict[str, float | None] = {}
+    for count_field in COUNT_FIELDS:
+        counts[count_field] = int(_sum_numeric(records, count_field)) if _has_numeric(records, count_field) else None
+        rate_field = RATE_FIELDS[count_field]
+        rates[rate_field] = (
+            None
+            if counts[count_field] is None or population_total <= 0
+            else round(float(counts[count_field]) / population_total * 1000, 3)
+        )
+
+    scores = {
+        score_field: _round_or_none(_weighted_average(records, score_field, "population_total"), 1)
+        for score_field in SCORE_FIELDS
+    }
+    coverage_status_counts = _counts(records, "coverage_status")
+    payload = {
+        **base,
+        "aggregation_method": "counts summed; rates recomputed from summed counts and population; scores are population-weighted averages of ZIP/ZCTA scores",
+        "population_total": int(population_total),
+        "counts": counts,
+        "rates_per_1000": rates,
+        "scores_0_100": scores,
+        "coverage": {
+            "coverage_status_counts": coverage_status_counts,
+            "data_source_type_counts": _counts(records, "data_source_type"),
+            "direct_observed_zip_count": coverage_status_counts.get("observed", 0),
+            "county_observed_zip_count": coverage_status_counts.get("county_observed_allocated", 0),
+            "modeled_zip_count": coverage_status_counts.get("national_modeled", 0),
+        },
+        "confidence_grade_counts": _counts(records, "confidence_grade"),
+        "source_names": sorted(
+            {
+                name.strip()
+                for record in records
+                for name in str(record.get("source_names") or "").split("|")
+                if name.strip()
+            }
+        ),
+    }
+    return payload
+
+
+def _sum_numeric(records: list[dict[str, Any]], field: str) -> float:
+    total = 0.0
+    for record in records:
+        value = _to_number(record.get(field))
+        if value is not None:
+            total += value
+    return total
+
+
+def _has_numeric(records: list[dict[str, Any]], field: str) -> bool:
+    return any(_to_number(record.get(field)) is not None for record in records)
+
+
+def _weighted_average(records: list[dict[str, Any]], value_field: str, weight_field: str) -> float | None:
+    weighted_sum = 0.0
+    weight_sum = 0.0
+    fallback_sum = 0.0
+    fallback_count = 0
+    for record in records:
+        value = _to_number(record.get(value_field))
+        if value is None:
+            continue
+        weight = _to_number(record.get(weight_field))
+        if weight is not None and weight > 0:
+            weighted_sum += value * weight
+            weight_sum += weight
+        else:
+            fallback_sum += value
+            fallback_count += 1
+    if weight_sum > 0:
+        return weighted_sum / weight_sum
+    return fallback_sum / fallback_count if fallback_count else None
+
+
+def _to_number(value: object) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
+def _round_or_none(value: float | None, digits: int) -> float | None:
+    return None if value is None else round(value, digits)
 
 
 def check_static_cors(base_url: str, origins: list[str]) -> list[dict[str, Any]]:
@@ -421,6 +624,16 @@ export async function getCrimeStatsForZips(options = {}) {
   });
 }
 
+export async function getCrimeStatsForCounty(options = {}) {
+  const baseUrl = (options.baseUrl || "").replace(/\\/$/, "");
+  if (!baseUrl) throw new Error("baseUrl is required");
+  if (!options.countyFips) throw new Error("countyFips is required");
+
+  const year = options.year || await latestYearFromBaseUrl(baseUrl);
+  const countyFips = String(options.countyFips).trim().padStart(5, "0");
+  return getJson(`${baseUrl}/api/v1/${year}/counties/${countyFips}.json`);
+}
+
 export function analyzeCrimeStatsGroup(records, options = {}) {
   const uniqueRecords = dedupeRecords(records);
   const requestedZips = options.requestedZips || uniqueRecords.map((record) => normalizeZcta(record.zcta));
@@ -471,7 +684,9 @@ export function analyzeCrimeStatsGroup(records, options = {}) {
     coverage: {
       coverage_status_counts: coverageStatusCounts,
       data_source_type_counts: dataSourceTypeCounts,
-      observed_zip_count: coverageStatusCounts.observed || 0,
+      direct_observed_zip_count: coverageStatusCounts.observed || 0,
+      county_observed_zip_count: coverageStatusCounts.county_observed_allocated || 0,
+      observed_zip_count: (coverageStatusCounts.observed || 0) + (coverageStatusCounts.county_observed_allocated || 0),
       modeled_zip_count: coverageStatusCounts.national_modeled || 0
     },
     confidence_grade_counts: confidenceGradeCounts,

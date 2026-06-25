@@ -287,16 +287,25 @@ With the current 2024 real-data defaults, the workflow also writes:
 ```text
 data/exports/zcta_national_coverage_2024.csv
 data/exports/zcta_national_coverage_2024.parquet
+data/exports/zcta_crime_scores_2024_county_observed_allocated.csv
+data/exports/zcta_crime_scores_2024_county_observed_allocated.parquet
+data/exports/zcta_crime_scores_2024_county_observed_allocated.geojson
 data/exports/zcta_crime_scores_2024_national_modeled_baseline.csv
 data/exports/zcta_crime_scores_2024_national_modeled_baseline.parquet
 data/exports/zcta_crime_scores_2024_national_modeled_baseline.geojson
 ```
 
-The `source_universe` output contains only ZCTAs with observed local incident data from loaded sources and is marked `coverage_status = observed` and `data_source_type = observed`. The `national_modeled_baseline` output contains every populated ZCTA from the national ACS population file and is marked `coverage_status = national_modeled` and `data_source_type = modeled`. It is a neutral national baseline, not local risk differentiation.
+The `source_universe` output contains only ZCTAs with observed local incident data from loaded sources and is marked `coverage_status = observed` and `data_source_type = observed`. The `county_observed_allocated` output uses FBI CDE CIUS 2024 agency offense tables, aggregates those rows to counties, and allocates county rates to ZCTAs with Census ZCTA-to-county relationship weights. The `national_modeled_baseline` output contains every populated ZCTA from the national ACS population file and is marked `coverage_status = national_modeled` and `data_source_type = modeled`. It is a neutral national baseline, not local risk differentiation.
 
 The modeled baseline uses the BJS 2024 national offense rates from *Crime Known to Law Enforcement, 2024*: 370.8 violent offenses and 1,835.1 property offenses per 100,000 persons, stored as 3.708 and 18.351 per 1,000 residents.
 
-After the latest local rebuild, the current observed source universe covers 1,185 ZCTAs from nineteen local incident feeds. The full national coverage export contains 33,772 populated ZCTAs: 1,185 observed rows and 32,587 national modeled rows.
+After the latest local rebuild, the default `national_combined` layer contains 33,772 populated ZCTAs:
+
+- 1,185 direct observed ZCTAs from nineteen local incident feeds.
+- 30,558 county-observed allocated ZCTAs from FBI CDE CIUS county aggregation.
+- 2,029 national modeled fallback ZCTAs where the CDE county layer did not produce a usable county row.
+
+That means 31,743 populated ZCTAs, or 94.0% of the current national bundle, are backed by observed local or county-level crime data. The remaining 6.0% stay in the modeled fallback and are explicitly marked `coverage_status = national_modeled`.
 
 - LAPD 2024 public crime incidents.
 - Chicago 2024 public crime incidents.
@@ -322,13 +331,15 @@ All nineteen are configured in `config/sources.yaml` with `download` blocks, so 
 
 ## Path To Full-US Indexed Coverage
 
-The product already exports a row for every populated U.S. ZCTA through `zcta_crime_scores_2024_national_modeled_baseline.*`. To move from a modeled full-US product to a higher-confidence observed full-US product, add official local, county, state, or federal incident and agency-level sources in layers:
+The product already exports a row for every populated U.S. ZCTA through the static `national_combined` API. Most populated ZCTAs now use either direct local incident data or county-observed FBI CDE data. To move the last modeled fallback areas to observed coverage, add official local, county, state, or federal sources in layers:
 
-1. Add high-volume official city/county incident feeds with coordinates first.
-2. Add state NIBRS/UCR portals where point-level city data is unavailable.
-3. Add FBI/NIBRS agency-level fallback rates for jurisdictions without open incident files.
-4. Keep every ZCTA in the national export and use `coverage_status`, `data_source_type`, `source_names`, `assigned_incident_count`, and `confidence_grade` to distinguish observed rows from modeled rows.
-5. Rebuild with `python -m crime_index.cli run-all --year 2024`, then review `data/processed/quality_report.md` before using the exports.
+1. Keep the Census ZCTA-to-county relationship file as the default ZIP/ZCTA-to-county crosswalk. It provides real county split weights from `AREALAND_PART` instead of equal splits.
+2. Use FBI CDE CIUS agency tables as the annual nationwide county-observed layer.
+3. Add county-equivalent crosswalks for states where CDE uses non-county regions, especially Connecticut planning regions and Puerto Rico municipios.
+4. Add state NIBRS/UCR portals where CDE county mapping is incomplete or where county-equivalent reporting changed after the 2020 Census relationship file.
+5. Add high-volume official city/county incident feeds with coordinates for higher-confidence direct observed rows.
+6. Keep every ZCTA in the national export and use `coverage_status`, `data_source_type`, `source_names`, `observed_level`, `allocation_method`, and `confidence_grade` to distinguish direct observed, county-observed allocated, and modeled rows.
+7. Rebuild with `python -m crime_index.cli run-all --year 2024`, then review `data/processed/quality_report.md` and `data/server/manifest.json` before using the exports.
 
 Analytical compatibility outputs are also written:
 
@@ -383,11 +394,15 @@ data/server/
       2024/
         zips/
           90210.json
+        counties/
+          06037.json
   2024/
     coverage.json
     national_combined/
       scores.json
     source_universe/
+      scores.json
+    county_observed_allocated/
       scores.json
     national_modeled_baseline/
       scores.json
@@ -398,8 +413,10 @@ Stable URLs after deployment:
 ```text
 https://YOUR_PAGES_HOST/manifest.json
 https://YOUR_PAGES_HOST/api/v1/2024/zips/90210.json
+https://YOUR_PAGES_HOST/api/v1/2024/counties/06037.json
 https://YOUR_PAGES_HOST/2024/national_combined/scores.json
 https://YOUR_PAGES_HOST/2024/source_universe/scores.json
+https://YOUR_PAGES_HOST/2024/county_observed_allocated/scores.json
 https://YOUR_PAGES_HOST/2024/national_modeled_baseline/scores.json
 https://YOUR_PAGES_HOST/2024/coverage.json
 https://YOUR_PAGES_HOST/crime-data-client.js
@@ -431,6 +448,18 @@ const stats = await fetch(
 
 The request key is a 5-digit ZIP-shaped value and is matched to the Census ZCTA key. ZIPs and ZCTAs are not identical, so response objects include both `zip` and `zcta`; for this static API they are the same normalized key.
 
+For a precomputed county group, use a 5-digit county FIPS endpoint:
+
+```js
+import { getCrimeStatsForCounty } from "https://YOUR_PAGES_HOST/crime-data-client.js";
+
+const countyStats = await getCrimeStatsForCounty({
+  baseUrl: "https://YOUR_PAGES_HOST",
+  year: 2024,
+  countyFips: "06037"
+});
+```
+
 For county-style or custom-area analysis, pass multiple ZIPs to the browser client:
 
 ```js
@@ -456,7 +485,7 @@ The returned group object includes:
 - missing ZIPs
 - optional member records
 
-Because GitHub Pages is static hosting, arbitrary multi-ZIP analysis cannot be handled by a server-side POST endpoint. The client helper performs the fan-out to per-ZIP JSON files and computes the group summary in the browser.
+Because GitHub Pages is static hosting, arbitrary multi-ZIP analysis runs as browser logic rather than a server-side POST endpoint. The client helper performs the fan-out to per-ZIP JSON files and computes the group summary in the browser.
 
 GitHub Pages serves static files with permissive CORS headers. The bundle records the intended consumer origins in `manifest.json` from `config/settings.yaml`:
 
@@ -477,7 +506,7 @@ python -m crime_index.cli check-static-cors --base-url https://YOUR_PAGES_HOST
 
 GitHub Pages cannot enforce API-key auth or a private per-origin allowlist for public static files. If the data needs real authentication, usage metering, or origin restriction, put a CDN worker or backend proxy in front of the static bundle. For the current public yearly index, no API key is required.
 
-When both observed and modeled exports are present, the default static scope is `national_combined`: observed source rows replace modeled rows for the same ZCTA, and modeled rows fill the rest of the country. The provenance fields still show whether each row is `observed` or `national_modeled`.
+When direct observed, county-observed, and modeled exports are present, the default static scope is `national_combined`: direct local incident rows have first priority, county-observed allocated rows fill the next tier, and modeled rows fill the rest of the country. The provenance fields still show whether each row is `observed`, `county_observed_allocated`, or `national_modeled`.
 
 ## Add A New Jurisdiction
 

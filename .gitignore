@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.pytest_tmp/
 .venv/
 venv/
 db/*.duckdb*
@@ -9,6 +10,9 @@ data/raw/crime/*.csv
 !data/raw/crime/sample_city_crime.csv
 data/raw/census/*.csv
 !data/raw/census/sample_acs_zcta_population.csv
+data/raw/fbi_cde/
 data/raw/geography/*.zip
+data/raw/geography/zip_county_mapping.tsv
+!data/raw/geography/tab20_zcta520_county20_natl.txt
 data/exports/
 data/processed/

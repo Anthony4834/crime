@@ -181,6 +181,116 @@ def create_tables(con: duckdb.DuckDBPyConnection) -> None:
         )
         """
     )
+    con.execute(
+        """
+        CREATE TABLE IF NOT EXISTS zip_county_mapping (
+            zcta TEXT,
+            county_fips TEXT,
+            county_name TEXT,
+            state_code TEXT,
+            state_name TEXT,
+            allocation_weight DOUBLE,
+            source TEXT,
+            loaded_at TIMESTAMP
+        )
+        """
+    )
+    con.execute(
+        """
+        CREATE TABLE IF NOT EXISTS fbi_cde_agencies (
+            ori TEXT,
+            state_code TEXT,
+            state_name TEXT,
+            agency_name TEXT,
+            agency_type_name TEXT,
+            counties TEXT,
+            county_fips TEXT,
+            county_name TEXT,
+            is_nibrs BOOLEAN,
+            latitude DOUBLE,
+            longitude DOUBLE,
+            nibrs_start_date DATE,
+            source_json TEXT,
+            loaded_at TIMESTAMP
+        )
+        """
+    )
+    con.execute(
+        """
+        CREATE TABLE IF NOT EXISTS fbi_cde_cius_agency_offenses (
+            year INTEGER,
+            table_number TEXT,
+            table_name TEXT,
+            state_code TEXT,
+            state_name TEXT,
+            agency_label TEXT,
+            agency_type TEXT,
+            county_fips TEXT,
+            county_name TEXT,
+            population_reported BIGINT,
+            violent_crime_count BIGINT,
+            property_crime_count BIGINT,
+            murder_count BIGINT,
+            rape_count BIGINT,
+            robbery_count BIGINT,
+            aggravated_assault_count BIGINT,
+            burglary_count BIGINT,
+            larceny_theft_count BIGINT,
+            motor_vehicle_theft_count BIGINT,
+            arson_count BIGINT,
+            mapping_method TEXT,
+            mapping_notes TEXT,
+            source_file TEXT,
+            loaded_at TIMESTAMP
+        )
+        """
+    )
+    con.execute(
+        """
+        CREATE TABLE IF NOT EXISTS county_crime_annual (
+            county_fips TEXT,
+            county_name TEXT,
+            state_code TEXT,
+            state_name TEXT,
+            year INTEGER,
+            population_total BIGINT,
+            total_crime_count BIGINT,
+            violent_crime_count BIGINT,
+            property_crime_count BIGINT,
+            total_rate_per_1000 DOUBLE,
+            violent_rate_per_1000 DOUBLE,
+            property_rate_per_1000 DOUBLE,
+            agency_count BIGINT,
+            city_agency_count BIGINT,
+            county_agency_count BIGINT,
+            source_names TEXT,
+            reporting_notes TEXT,
+            created_at TIMESTAMP
+        )
+        """
+    )
+    con.execute(
+        """
+        CREATE TABLE IF NOT EXISTS zcta_county_crime_allocation (
+            zcta TEXT,
+            year INTEGER,
+            county_fips TEXT,
+            county_name TEXT,
+            state_code TEXT,
+            allocation_weight DOUBLE,
+            zcta_population_total BIGINT,
+            county_population_total BIGINT,
+            county_total_rate_per_1000 DOUBLE,
+            county_violent_rate_per_1000 DOUBLE,
+            county_property_rate_per_1000 DOUBLE,
+            allocated_total_crime_count DOUBLE,
+            allocated_violent_crime_count DOUBLE,
+            allocated_property_crime_count DOUBLE,
+            source_names TEXT,
+            created_at TIMESTAMP
+        )
+        """
+    )
     aggregate_columns = """
             zcta TEXT,
             year INTEGER,
@@ -324,6 +434,12 @@ def create_tables(con: duckdb.DuckDBPyConnection) -> None:
             "assigned_incident_count": "BIGINT",
             "spatial_incident_count": "BIGINT",
             "is_modeled": "BOOLEAN",
+            "observed_level": "TEXT",
+            "county_fips": "TEXT",
+            "county_name": "TEXT",
+            "county_count": "BIGINT",
+            "county_components": "TEXT",
+            "allocation_method": "TEXT",
         },
     )
 
