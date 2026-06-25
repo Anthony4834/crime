@@ -166,6 +166,8 @@ COUNT_COLUMNS = [
     "arson_count",
 ]
 
+CountyLookupValue = tuple[str, str, int, str | None]
+
 
 def download_cius_offenses_known(
     year: int,
@@ -255,9 +257,18 @@ def load_cius_offenses_known(
     with get_connection(database_path) as con:
         mapping = con.execute("SELECT * FROM zip_county_mapping").fetchdf()
         agencies = con.execute("SELECT * FROM fbi_cde_agencies").fetchdf()
+        population = con.execute(
+            """
+            SELECT zcta, year, population_total
+            FROM acs_zcta_population
+            WHERE year = ?
+            """,
+            [year],
+        ).fetchdf()
     county_lookup = county_lookup_from_mapping(mapping)
-    city_lookup = _city_county_lookup(agencies)
-    agency_lookup = _agency_county_lookup(agencies)
+    county_population_lookup = _county_population_lookup(mapping, population)
+    city_lookup = _city_county_lookup(agencies, county_population_lookup)
+    agency_lookup = _agency_county_lookup(agencies, county_population_lookup)
 
     rows = parse_cius_offenses_known_zip(
         zip_path,
@@ -279,8 +290,8 @@ def parse_cius_offenses_known_zip(
     year: int,
     table_numbers: list[str],
     county_lookup: dict[tuple[str, str], tuple[str, str]],
-    city_lookup: dict[tuple[str, str], tuple[str, str, int]],
-    agency_lookup: dict[tuple[str, str], tuple[str, str, int]],
+    city_lookup: dict[tuple[str, str], CountyLookupValue],
+    agency_lookup: dict[tuple[str, str], CountyLookupValue],
 ) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     with zipfile.ZipFile(zip_path) as archive:
@@ -317,8 +328,8 @@ def _parse_cius_table(
     year: int,
     source_file: str,
     county_lookup: dict[tuple[str, str], tuple[str, str]],
-    city_lookup: dict[tuple[str, str], tuple[str, str, int]],
-    agency_lookup: dict[tuple[str, str], tuple[str, str, int]],
+    city_lookup: dict[tuple[str, str], CountyLookupValue],
+    agency_lookup: dict[tuple[str, str], CountyLookupValue],
 ) -> list[dict[str, Any]]:
     raw = pd.read_excel(io.BytesIO(workbook_bytes), sheet_name=0, header=None, dtype=object)
     header_idx = _find_header_row(raw)
@@ -383,8 +394,8 @@ def _resolve_county(
     state_code: str,
     agency_label: str,
     county_lookup: dict[tuple[str, str], tuple[str, str]],
-    city_lookup: dict[tuple[str, str], tuple[str, str, int]],
-    agency_lookup: dict[tuple[str, str], tuple[str, str, int]],
+    city_lookup: dict[tuple[str, str], CountyLookupValue],
+    agency_lookup: dict[tuple[str, str], CountyLookupValue],
 ) -> tuple[str | None, str | None, str, str | None]:
     if table_number == "10":
         key = (state_code, normalize_county_key(record.get("county")))
@@ -397,7 +408,9 @@ def _resolve_county(
         key = (state_code, normalize_place_key(agency_label))
         resolved = city_lookup.get(key)
         if resolved:
-            county_fips, county_name, match_count = resolved
+            county_fips, county_name, match_count, lookup_notes = resolved
+            if lookup_notes:
+                return county_fips, county_name, "agency_city_lookup_primary_county", lookup_notes
             method = "agency_city_lookup" if match_count == 1 else "agency_city_lookup_ambiguous_same_county"
             return county_fips, county_name, method, None
         return None, None, "unmatched_city", f"city_not_found:{agency_label}"
@@ -405,7 +418,9 @@ def _resolve_county(
     key = (state_code, normalize_agency_key(agency_label))
     resolved = agency_lookup.get(key)
     if resolved:
-        county_fips, county_name, match_count = resolved
+        county_fips, county_name, match_count, lookup_notes = resolved
+        if lookup_notes:
+            return county_fips, county_name, "agency_name_lookup_primary_county", lookup_notes
         method = "agency_name_lookup" if match_count == 1 else "agency_name_lookup_ambiguous_same_county"
         return county_fips, county_name, method, None
     return None, None, "unmatched_agency_name", f"agency_not_found:{agency_label}"
@@ -482,51 +497,107 @@ def _resolve_agency_counties(
     return "|".join(item[0] for item in unique), "|".join(item[1] for item in unique)
 
 
-def _city_county_lookup(agencies: pd.DataFrame) -> dict[tuple[str, str], tuple[str, str, int]]:
-    candidates: dict[tuple[str, str], list[tuple[str, str]]] = {}
+def _city_county_lookup(
+    agencies: pd.DataFrame,
+    county_population_lookup: dict[str, int] | None = None,
+) -> dict[tuple[str, str], CountyLookupValue]:
+    candidates: dict[tuple[str, str], list[tuple[str, str, str | None]]] = {}
     if agencies.empty:
         return {}
     for row in agencies.dropna(subset=["agency_name", "county_fips"]).itertuples(index=False):
-        county_fips = str(getattr(row, "county_fips") or "")
-        county_name = str(getattr(row, "county_name") or "")
-        if "|" in county_fips or not county_fips:
-            continue
         state_code = str(getattr(row, "state_code") or "")
         key = (state_code, city_key_from_agency_name(getattr(row, "agency_name")))
         if key[1]:
-            candidates.setdefault(key, []).append((county_fips, county_name))
+            candidates.setdefault(key, []).extend(_county_candidates_from_row(row, county_population_lookup))
     return _unique_same_county_lookup(candidates)
 
 
-def _agency_county_lookup(agencies: pd.DataFrame) -> dict[tuple[str, str], tuple[str, str, int]]:
-    candidates: dict[tuple[str, str], list[tuple[str, str]]] = {}
+def _agency_county_lookup(
+    agencies: pd.DataFrame,
+    county_population_lookup: dict[str, int] | None = None,
+) -> dict[tuple[str, str], CountyLookupValue]:
+    candidates: dict[tuple[str, str], list[tuple[str, str, str | None]]] = {}
     if agencies.empty:
         return {}
     for row in agencies.dropna(subset=["agency_name", "county_fips"]).itertuples(index=False):
-        county_fips = str(getattr(row, "county_fips") or "")
-        county_name = str(getattr(row, "county_name") or "")
-        if "|" in county_fips or not county_fips:
-            continue
         state_code = str(getattr(row, "state_code") or "")
         keys = {
             normalize_agency_key(getattr(row, "agency_name")),
             city_key_from_agency_name(getattr(row, "agency_name")),
         }
+        counties = _county_candidates_from_row(row, county_population_lookup)
         for key_value in keys:
             if key_value:
-                candidates.setdefault((state_code, key_value), []).append((county_fips, county_name))
+                candidates.setdefault((state_code, key_value), []).extend(counties)
     return _unique_same_county_lookup(candidates)
 
 
 def _unique_same_county_lookup(
-    candidates: dict[tuple[str, str], list[tuple[str, str]]],
-) -> dict[tuple[str, str], tuple[str, str, int]]:
-    lookup: dict[tuple[str, str], tuple[str, str, int]] = {}
+    candidates: dict[tuple[str, str], list[tuple[str, str, str | None]]],
+) -> dict[tuple[str, str], CountyLookupValue]:
+    lookup: dict[tuple[str, str], CountyLookupValue] = {}
     for key, values in candidates.items():
-        unique = sorted(set(values))
+        unique = sorted({(value[0], value[1]) for value in values})
         if len({value[0] for value in unique}) == 1:
-            lookup[key] = (unique[0][0], unique[0][1], len(values))
+            notes = ";".join(sorted({value[2] for value in values if value[2]})) or None
+            lookup[key] = (unique[0][0], unique[0][1], len(values), notes)
     return lookup
+
+
+def _county_candidates_from_row(
+    row: Any,
+    county_population_lookup: dict[str, int] | None,
+) -> list[tuple[str, str, str | None]]:
+    county_fips = str(getattr(row, "county_fips") or "")
+    county_name = str(getattr(row, "county_name") or "")
+    if not county_fips:
+        return []
+
+    fips_values = [value for value in county_fips.split("|") if value]
+    name_values = [value for value in county_name.split("|") if value]
+    if len(fips_values) == 1:
+        return [(fips_values[0], name_values[0] if name_values else county_name, None)]
+
+    selected = _select_primary_county(fips_values, name_values, county_population_lookup or {})
+    if not selected:
+        return []
+    selected_fips, selected_name = selected
+    note = f"multi_county_agency:{'|'.join(fips_values)};primary_county_by_population"
+    return [(selected_fips, selected_name, note)]
+
+
+def _select_primary_county(
+    fips_values: list[str],
+    name_values: list[str],
+    county_population_lookup: dict[str, int],
+) -> tuple[str, str] | None:
+    ranked = [
+        (int(county_population_lookup.get(fips, 0)), fips, name_values[index] if index < len(name_values) else "")
+        for index, fips in enumerate(fips_values)
+    ]
+    ranked = [item for item in ranked if item[0] > 0]
+    if not ranked:
+        return None
+    _, county_fips, county_name = max(ranked, key=lambda item: (item[0], item[1]))
+    return county_fips, county_name
+
+
+def _county_population_lookup(mapping: pd.DataFrame, population: pd.DataFrame) -> dict[str, int]:
+    if mapping.empty or population.empty:
+        return {}
+    required_mapping = {"zcta", "county_fips", "allocation_weight"}
+    required_population = {"zcta", "population_total"}
+    if not required_mapping.issubset(mapping.columns) or not required_population.issubset(population.columns):
+        return {}
+
+    safe_mapping = mapping[["zcta", "county_fips", "allocation_weight"]].copy()
+    safe_population = population[["zcta", "population_total"]].copy()
+    safe_mapping["allocation_weight"] = pd.to_numeric(safe_mapping["allocation_weight"], errors="coerce").fillna(0)
+    safe_population["population_total"] = pd.to_numeric(safe_population["population_total"], errors="coerce").fillna(0)
+    joined = safe_mapping.merge(safe_population, on="zcta", how="inner")
+    joined["allocated_population"] = joined["population_total"] * joined["allocation_weight"]
+    county = joined.groupby("county_fips", dropna=True)["allocated_population"].sum()
+    return {str(county_fips): int(round(population_total)) for county_fips, population_total in county.items()}
 
 
 def normalize_place_key(value: object | None) -> str:
