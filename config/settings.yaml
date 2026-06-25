@@ -1,0 +1,106 @@
+database:
+  type: duckdb
+  path: db/crime_index.duckdb
+
+geography:
+  canonical_crs: EPSG:4326
+  default_file: data/raw/geography/cb_2020_us_zcta520_500k.zip
+  default_year: 2020
+  zcta_id_columns:
+    - ZCTA5CE20
+    - ZCTA5CE10
+    - GEOID20
+    - GEOID10
+    - GEOID
+    - zcta
+
+population:
+  default_file: data/raw/census/census_reporter_acs2024_zcta_population_us.csv
+  default_year: 2024
+
+aggregation:
+  include_population_only_zctas: false
+
+modeled_baseline:
+  source_name: bjs_nibrs_national_estimates_2024
+  source_url: https://bjs.ojp.gov/library/publications/crime-known-law-enforcement-2024
+  comparison_scope: national_modeled_baseline
+  violent_rate_per_1000: 3.708
+  property_rate_per_1000: 18.351
+  notes: BJS 2024 national violent and property offense rates are applied uniformly to every populated ZCTA. This is a national fallback, not local risk differentiation.
+
+index:
+  rate_multiplier: 1000
+  winsorize_lower_pct: 0.01
+  winsorize_upper_pct: 0.99
+  violent_weight: 0.60
+  property_weight: 0.35
+  total_weight: 0.05
+  index_mean: 100
+  index_std: 15
+  min_population_for_index: 100
+  low_population_threshold: 500
+  preferred_population_threshold: 1000
+  low_count_threshold: 5
+
+score_model:
+  default_model: percentile
+  percentile:
+    ranking_method: average
+    output_min: 0
+    output_max: 100
+    round_digits: 1
+  zscore_logistic:
+    enabled: true
+    round_digits: 1
+  winsorization:
+    enabled: true
+    lower_pct: 0.01
+    upper_pct: 0.99
+  overall_weights:
+    violent: 0.40
+    property: 0.30
+    weapons: 0.15
+    drug: 0.05
+    public_order: 0.05
+    other: 0.05
+  include_unknown_in_overall_score: false
+  renormalize_weights_when_missing: true
+  labels:
+    very_low:
+      min: 0
+      max: 20
+    low:
+      min: 20
+      max: 40
+    average:
+      min: 40
+      max: 60
+    high:
+      min: 60
+      max: 80
+    very_high:
+      min: 80
+      max: 100
+
+quality:
+  invalid_coordinate_values:
+    - [0, 0]
+  max_unassigned_warning_rate: 0.20
+  max_unknown_offense_warning_rate: 0.25
+
+exports:
+  formats:
+    - csv
+    - parquet
+    - geojson
+
+static_bundle:
+  output_dir: data/server
+  allowed_origins:
+    - http://localhost:3000
+    - http://localhost:5173
+    - http://127.0.0.1:3000
+    - http://127.0.0.1:5173
+    - https://fmr.fyi
+    - https://www.fmr.fyi

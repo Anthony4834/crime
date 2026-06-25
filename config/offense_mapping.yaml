@@ -1,0 +1,460 @@
+violent:
+  murder:
+    keywords:
+      - murder
+      - homicide
+      - manslaughter
+  rape_sexual_assault:
+    keywords:
+      - rape
+      - sexual assault
+      - sex unlawful
+      - sexual penetration
+      - oral copulation
+      - human trafficking
+      - sodomy
+      - child pornography
+      - crim sexual assault
+      - sex offense
+      - sex crime
+      - sex crimes
+      - sexual offense
+      - sexual imposition
+      - gross sexual imposition
+      - prostitution
+      - forcible fondling
+      - molestation
+      - sexual misconduct
+      - enticement of a minor
+      - sex abuse
+  robbery:
+    keywords:
+      - robbery
+  aggravated_assault:
+    keywords:
+      - aggravated assault
+      - assault with weapon
+      - shooting
+      - stabbing
+      - aggravated battery
+      - assault
+      - battery
+      - assault
+      - criminal threats
+      - threats to do bodily harm
+      - threatening phone calls
+      - child abuse
+      - child annoying
+      - crime against child
+      - crm agnst chld
+      - child stealing
+      - spousal abuse
+      - intimate partner
+      - domestic violence
+      - kidnap
+      - kidnapping
+      - stalking
+      - extortion
+      - false imprisonment
+      - throwing object at moving vehicle
+      - homicide
+      - intimidation
+      - offense involving children
+      - offenses related to children
+      - child abandonment
+      - endangering children
+      - interference with custody
+      - offences against the family and children
+      - family offenses nonviolent
+      - felony assault
+      - felonious assault
+      - assaults
+      - other assaults
+      - offenses against the person
+      - other crimes against persons
+      - offenses against family and children
+      - homicide criminal
+      - murder nonnegligent manslaughter
+      - fondling
+      - incest
+      - common assault
+      - agg assault
+      - aggravated menacing
+      - menacing
+      - strangulation
+      - abduction
+      - unlawful restraint
+      - gunshot wound victims
+      - asslt
+      - threat of mass violence
+      - family offense
+
+property:
+  burglary:
+    keywords:
+      - burglary
+      - breaking and entering
+      - breaking entering
+      - burglary be
+      - aggravated burglary
+      - b&e
+      - burgl forced entry
+      - burgl no forced entry
+  larceny_theft:
+    keywords:
+      - theft
+      - larceny
+      - shoplifting
+      - stolen property
+      - stolen
+      - pickpocket
+      - purse snatch
+      - bike
+      - bicycle
+      - petit larceny
+      - grand larceny
+      - other offenses related to theft
+      - thefts
+      - theft from vehicle
+      - theft from building
+      - all other larceny
+      - theft of motor vehicle parts
+      - receiving stolen property
+      - pocket picking
+      - pocket-picking
+      - burglars tools
+      - burglar s tools
+      - burglar tools
+      - jostling
+      - drunk roll
+      - larceny from auto
+      - larceny of motor vehicle parts
+      - property accidental damage
+      - property lost then located
+      - larc from bldg
+      - larc parts from veh
+      - larc postal
+      - larc resid
+      - organized retail crime
+  motor_vehicle_theft:
+    keywords:
+      - auto theft
+      - motor vehicle theft
+      - stolen vehicle
+      - vehicle theft
+      - vehicle stolen
+      - theft from motor vehicle
+      - burglary from vehicle
+      - driving without owner consent
+      - dwoc
+      - motor vehicle theft
+      - grand larceny of motor vehicle
+      - unauthorized use of a vehicle
+      - unauthorized use of motor vehicle
+      - theft of vehicle
+  arson:
+    keywords:
+      - arson
+  property_damage:
+    keywords:
+      - property damage
+      - tampering
+      - burning or exploding
+      - destruction damage vandalism of property
+      - damage prop
+      - damage to property
+      - damage vandalism of property
+      - reckless burning
+  fraud:
+    keywords:
+      - fraud
+      - frauds
+      - forgery
+      - counterfeit
+      - bunco
+      - embezzlement
+      - identity
+      - unauthorized computer access
+      - embezzelment
+      - embezzlement
+      - embezzle
+      - deceptive practice
+      - fraud
+      - stolen property
+      - offenses involving fraud
+      - theft fraud
+      - credit card automated teller machine fraud
+      - false pretenses swindle confidence game
+      - wire fraud
+      - identity theft
+      - impersonation
+      - hacking computer invasion
+      - forgery and counterfeiting
+      - fraudulent accosting
+      - bad checks
+      - worthless check
+      - white collar crime
+      - taking the identity of another
+      - misuse of credit card
+      - telecommunications fraud
+      - false pretenses swindle
+      - credit card automatic teller
+      - fraudulent use of a credit device
+      - credit card fraudulent use
+      - counterfeiting of
+      - pass counterfeited
+      - pass forged
+      - forge simulate
+      - stealing from building
+      - stealing from auto
+      - property damage
+      - tampering
+      - burning or exploding
+      - destruction damage vandalism of property
+
+drug:
+  drug_offense:
+    keywords:
+      - narcotic
+      - narcotics
+      - drug
+      - controlled substance
+      - dangerous drugs
+      - drug narcotic violations
+      - drug equipment violations
+      - narcotic drug law violations
+      - cannabis related offenses
+      - drug alcohol
+      - drugs
+      - drug narcotic violations
+      - marijuana possess
+      - marijuana sell
+      - possession of a controlled sub
+      - poss w int cont sub
+      - poss w int cont sub meth
+      - poss w int cont sub fentanyl
+      - poss or casual exchange of meth
+      - amphetamine possess
+      - controlled sub analogue
+
+weapons:
+  weapons_offense:
+    keywords:
+      - weapon
+      - firearm
+      - gun
+      - handgun
+      - brandish
+      - shots fired
+      - bomb scare
+      - weapons violation
+      - concealed carry license violation
+      - weapons offense
+      - weapons carrying etc
+      - dangerous weapons
+      - weapon law violations
+      - weapons law violations
+      - weapon violations
+      - weap
+      - improperly discharging firearm
+      - shotspotter activation
+
+public_order:
+  disorder:
+    keywords:
+      - disorderly
+      - disturbance
+      - trespass
+      - trespassing
+      - vandalism
+      - disturbing the peace
+      - resisting arrest
+      - violation of court order
+      - restraining order
+      - violate protection order
+      - contempt of court
+      - failure to yield
+      - reckless driving
+      - sex offender
+      - peeping tom
+      - false police report
+      - pandering
+      - pimping
+      - criminal damage
+      - criminal mischief
+      - criminal damaging endangering
+      - graffiti
+      - criminal trespass
+      - other offense
+      - all other offenses
+      - interference with public officer
+      - liquor law violation
+      - gambling
+      - betting wagering
+      - obscenity
+      - malicious mischief
+      - miscellaneous investigation
+      - public peace violation
+      - public disorder
+      - warrant
+      - traffic violation arrest
+      - traffic violation hazardous
+      - traffic violation non hazardous
+      - driving under the influence
+      - public intoxication
+      - public drunkenness
+      - liquor laws
+      - liquor law violations
+      - license premise violation
+      - liquor alcohol drinking in public
+      - traffic collision
+      - vehicle and traffic laws
+      - intoxicated impaired driving
+      - driving under the influence
+      - lewd
+      - indecent exposure
+      - public indecency
+      - prowler
+      - harassment
+      - harrassment
+      - miscellaneous penal law
+      - offenses against public administration
+      - offenses against public admini
+      - off agnst pub ord sensblty
+      - offenses against public safety
+      - administrative code
+      - other state laws
+      - violation of no contact orders
+      - trespass of real
+      - disorderly conduct
+      - prostitution and commercialized vice
+      - vagrancy loitering
+      - curfew loitering vagrancy violations
+      - alcoholic beverage control law
+      - escape
+      - pornography obscene material
+      - pornography
+      - disruption of a religious serv
+      - failure to disperse
+      - fail comply order
+      - fail comply order signal
+      - illegal dumping
+      - drunkenness
+      - verbal dispute
+      - violation of auto law
+      - val violation of auto law
+      - val operating after rev susp
+      - val operating w o authorization lawful
+      - leaving scene
+      - m v accident
+      - operating under the influence
+      - noisy party
+      - landlord tenant
+      - city ordinance
+      - harbor incident violation
+      - dangerous or hazardous condition
+      - fugitive from justice
+      - affray
+      - part 2
+      - evading fare
+      - bomb threat
+      - intimidating witness
+      - inducing panic
+      - making false alarms
+      - vehicular non injury
+      - vehicular non-injury
+      - vehicular injury
+      - vehicular fatality
+      - hit and run
+      - eluding resisting
+      - resisting a lawful stop
+      - warrant arrest
+      - violation of full order of protection
+      - violation of ex parte order of protection
+      - service of an ex parte order of protection
+      - service of a full order of protection
+      - obstructing and resisting an officer
+      - invasion of privacy
+      - tavern nightclub response
+      - commercial sex acts
+      - curfew loitering vargancy violations
+      - curfew loitering vagrancy violations
+      - terroristic threats
+      - driving while suspended
+      - driving while revoked
+      - alcohol influence report
+      - contempt violation of protection order
+      - criminal contempt violation of order of protection
+      - no contact order violation
+      - threat to bomb
+      - regis plates alter forge falsify
+      - vehicle offense criminal attempt
+
+other:
+  other:
+    keywords:
+      - other
+      - all other crimes
+      - other miscellaneous crime
+      - other miscellaneous
+      - child neglect
+      - cruelty to animals
+      - recovered vehicle
+      - non criminal
+      - miscellaneous
+      - lost property
+      - missing person
+      - suspicious occ
+      - case closure
+      - courtesy report
+      - fire report
+      - vehicle impounded
+      - vehicle misplaced
+      - suicide
+      - animal offenses
+      - animal cruelty
+      - not reportable to nibrs
+      - not reportable
+      - runaway
+      - bribery
+      - investigate person
+      - investigate property
+      - sick assist
+      - sick injured medical
+      - property lost missing
+      - property found
+      - towed motor vehicle
+      - fire report
+      - missing person located
+      - sudden death
+      - death investigation
+      - animal incidents
+      - animal abuse
+      - ballistics evidence found
+      - m v plates lost
+      - loss
+      - unfounded
+      - dead body
+      - recovered property
+      - casualty
+      - mental health crisis intervention
+      - tow in report
+      - authorization not to tow
+      - legacy incident report
+      - attempt to locate motor vehicle
+      - interdiction
+      - animal bite
+      - juvenile apprehension
+      - buy report
+      - mug and print request
+      - police inquiry
+      - found property
+      - test only
+      - civil case
+      - unknown death
+      - death natural
+      - death unnatural
+      - transport
+      - overdose
+      - accidental injury
+      - interference with agriculture

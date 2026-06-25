@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+db/*.duckdb*
+data/raw/crime/*.csv
+!data/raw/crime/sample_city_crime.csv
+data/raw/census/*.csv
+!data/raw/census/sample_acs_zcta_population.csv
+data/raw/geography/*.zip
+data/exports/
+data/processed/

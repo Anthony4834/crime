@@ -1,0 +1,68 @@
+{
+  "type": "FeatureCollection",
+  "name": "sample_zcta",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "GEOID": "90001",
+        "ZCTA5CE20": "90001",
+        "ALAND": 1000000,
+        "AWATER": 0,
+        "STATEFP": "06"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-118.30, 34.00], [-118.20, 34.00], [-118.20, 34.10], [-118.30, 34.10], [-118.30, 34.00]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GEOID": "90002",
+        "ZCTA5CE20": "90002",
+        "ALAND": 900000,
+        "AWATER": 0,
+        "STATEFP": "06"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-118.30, 34.10], [-118.20, 34.10], [-118.20, 34.20], [-118.30, 34.20], [-118.30, 34.10]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GEOID": "90003",
+        "ZCTA5CE20": "90003",
+        "ALAND": 1100000,
+        "AWATER": 0,
+        "STATEFP": "06"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-118.30, 34.20], [-118.20, 34.20], [-118.20, 34.30], [-118.30, 34.30], [-118.30, 34.20]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GEOID": "90004",
+        "ZCTA5CE20": "90004",
+        "ALAND": 1200000,
+        "AWATER": 0,
+        "STATEFP": "06"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-118.20, 34.00], [-118.10, 34.00], [-118.10, 34.10], [-118.20, 34.10], [-118.20, 34.00]]]
+      }
+    }
+  ]
+}

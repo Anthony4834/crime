@@ -1,0 +1,927 @@
+sources:
+  lapd_2024:
+    file: data/raw/crime/lapd_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.lacity.org/resource/2nrs-mtv8
+      limit: 500000
+      select:
+        - dr_no
+        - date_occ
+        - time_occ
+        - crm_cd
+        - crm_cd_desc
+        - location
+        - lat
+        - lon
+        - area
+        - area_name
+        - premis_desc
+        - weapon_desc
+        - status_desc
+      where: date_occ between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+    source_type: local_incident
+    source_url: https://data.lacity.org/resource/2nrs-mtv8
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Los Angeles
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: approximate_block_or_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: LAPD public crime data with coordinates; address fields are privacy-generalized by the source.
+    jurisdiction_name: Los Angeles
+    jurisdiction_state: CA
+    date_column: date_occ
+    time_column: time_occ
+    offense_column: crm_cd_desc
+    offense_code_column: crm_cd
+    latitude_column: lat
+    longitude_column: lon
+    address_column: location
+    zip_column: null
+    incident_id_column: dr_no
+    source_crs: EPSG:4326
+    timezone: America/Los_Angeles
+
+  chicago_2024:
+    file: data/raw/crime/chicago_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.cityofchicago.org/resource/ijzp-q8t2
+      limit: 500000
+      select:
+        - id
+        - case_number
+        - date
+        - primary_type
+        - description
+        - block
+        - latitude
+        - longitude
+        - location_description
+        - arrest
+        - domestic
+        - year
+      where: date between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+    source_type: local_incident
+    source_url: https://data.cityofchicago.org/resource/ijzp-q8t2
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Chicago
+    coverage_state: IL
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: approximate_block_or_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Chicago public crime data with latitude and longitude when available; incident locations may be generalized by the source.
+    jurisdiction_name: Chicago
+    jurisdiction_state: IL
+    date_column: date
+    time_column: null
+    offense_column: primary_type
+    offense_code_column: iucr
+    latitude_column: latitude
+    longitude_column: longitude
+    address_column: block
+    zip_column: null
+    incident_id_column: id
+    source_crs: EPSG:4326
+    timezone: America/Chicago
+
+  sfpd_2024:
+    file: data/raw/crime/sfpd_incidents_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.sfgov.org/resource/wg3w-h783
+      limit: 300000
+      select:
+        - row_id
+        - incident_datetime
+        - incident_date
+        - incident_time
+        - incident_id
+        - incident_number
+        - incident_code
+        - incident_category
+        - incident_subcategory
+        - incident_description
+        - intersection
+        - police_district
+        - analysis_neighborhood
+        - latitude
+        - longitude
+        - resolution
+      where: incident_datetime between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+    source_type: local_incident
+    source_url: https://data.sfgov.org/resource/wg3w-h783
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City and County of San Francisco
+    coverage_state: CA
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: approximate_intersection_or_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: SFPD incident reports with coordinates; source notes that locations may be mapped to nearby intersections for anonymity.
+    jurisdiction_name: San Francisco
+    jurisdiction_state: CA
+    date_column: incident_datetime
+    time_column: null
+    offense_column: incident_category
+    offense_code_column: incident_code
+    latitude_column: latitude
+    longitude_column: longitude
+    address_column: intersection
+    zip_column: null
+    incident_id_column: row_id
+    source_crs: EPSG:4326
+    timezone: America/Los_Angeles
+
+  dallas_2024:
+    file: data/raw/crime/dallas_incidents_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://www.dallasopendata.com/resource/yn72-daik
+      limit: 300000
+      select:
+        - incidentnum
+        - servnumid
+        - year1
+        - month1
+        - date1dayofyear
+        - time1
+        - offincident
+        - nibrs_crime
+        - nibrs_crime_category
+        - nibrs_code
+        - incident_address
+        - zip_code
+        - city
+        - state
+        - geocoded_column
+      where: year1 = 2024
+    source_type: local_incident
+    source_url: https://www.dallasopendata.com/resource/yn72-daik
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Dallas
+    coverage_state: TX
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: geocoded_point_or_zip
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Dallas public RMS incidents include NIBRS categories, ZIP codes, and geocoded point WKT when available.
+    jurisdiction_name: Dallas
+    jurisdiction_state: TX
+    date_column: null
+    year_column: year1
+    day_of_year_column: date1dayofyear
+    time_column: time1
+    offense_column: nibrs_crime_category
+    offense_code_column: nibrs_code
+    latitude_column: null
+    longitude_column: null
+    geocoded_point_column: geocoded_column
+    address_column: incident_address
+    zip_column: zip_code
+    incident_id_column: servnumid
+    source_crs: EPSG:4326
+    timezone: America/Chicago
+
+  nyc_2024:
+    file: data/raw/crime/nyc_nypd_complaints_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.cityofnewyork.us/resource/qgea-i56i
+      limit: 700000
+      select:
+        - cmplnt_num
+        - cmplnt_fr_dt
+        - cmplnt_fr_tm
+        - ofns_desc
+        - pd_desc
+        - law_cat_cd
+        - boro_nm
+        - prem_typ_desc
+        - latitude
+        - longitude
+      where: cmplnt_fr_dt between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+    source_type: local_incident
+    source_url: https://data.cityofnewyork.us/resource/qgea-i56i
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of New York
+    coverage_state: NY
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: approximate_or_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: NYPD complaint data with latitude and longitude where available; source locations may be generalized.
+    jurisdiction_name: New York
+    jurisdiction_state: NY
+    date_column: cmplnt_fr_dt
+    time_column: cmplnt_fr_tm
+    offense_column: ofns_desc
+    offense_code_column: pd_desc
+    latitude_column: latitude
+    longitude_column: longitude
+    address_column: prem_typ_desc
+    zip_column: null
+    incident_id_column: cmplnt_num
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  seattle_2024:
+    file: data/raw/crime/seattle_spd_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.seattle.gov/resource/tazs-3rd5
+      limit: 150000
+      select:
+        - report_number
+        - report_date_time
+        - offense_id
+        - offense_date
+        - offense_category
+        - nibrs_offense_code_description
+        - nibrs_offense_code
+        - block_address
+        - latitude
+        - longitude
+        - precinct
+        - neighborhood
+      where: offense_date between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+    source_type: local_incident
+    source_url: https://data.seattle.gov/resource/tazs-3rd5
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Seattle
+    coverage_state: WA
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: approximate_block_or_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Seattle SPD crime data with NIBRS descriptions and coordinates where available.
+    jurisdiction_name: Seattle
+    jurisdiction_state: WA
+    date_column: offense_date
+    time_column: null
+    offense_column: nibrs_offense_code_description
+    offense_code_column: nibrs_offense_code
+    latitude_column: latitude
+    longitude_column: longitude
+    address_column: block_address
+    zip_column: null
+    incident_id_column: offense_id
+    source_crs: EPSG:4326
+    timezone: America/Los_Angeles
+
+  philadelphia_2024:
+    file: data/raw/crime/philadelphia_incidents_2024.csv
+    download:
+      type: direct
+      url: "https://phl.carto.com/api/v2/sql?filename=incidents_part1_part2_2024&format=csv&q=SELECT%20objectid%2Cdc_dist%2Cdispatch_date_time%2Cdispatch_date%2Cdispatch_time%2Cdc_key%2Clocation_block%2Cucr_general%2Ctext_general_code%2Cpoint_x%2Cpoint_y%2CST_Y(the_geom)%20AS%20lat%2CST_X(the_geom)%20AS%20lng%20FROM%20incidents_part1_part2%20WHERE%20dispatch_date_time%20%3E%3D%20%272024-01-01%27%20AND%20dispatch_date_time%20%3C%20%272025-01-01%27"
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://opendataphilly.org/datasets/crime-incidents/
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Philadelphia
+    coverage_state: PA
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: rounded_block_or_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Philadelphia Part I and Part II crime incidents from OpenDataPhilly/CARTO with latitude and longitude where available.
+    jurisdiction_name: Philadelphia
+    jurisdiction_state: PA
+    date_column: dispatch_date_time
+    time_column: null
+    offense_column: text_general_code
+    offense_code_column: ucr_general
+    latitude_column: lat
+    longitude_column: lng
+    address_column: location_block
+    zip_column: null
+    incident_id_column: objectid
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  denver_2024:
+    file: data/raw/crime/denver_crime_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_CRIME_OFFENSES_P/FeatureServer/324
+      where: FIRST_OCCURRENCE_DATE >= DATE '2024-01-01' AND FIRST_OCCURRENCE_DATE < DATE '2025-01-01'
+      out_fields:
+        - INCIDENT_ID
+        - OFFENSE_ID
+        - OFFENSE_TYPE_ID
+        - OFFENSE_CATEGORY_ID
+        - FIRST_OCCURRENCE_DATE
+        - LAST_OCCURRENCE_DATE
+        - GEO_LON
+        - GEO_LAT
+        - NEIGHBORHOOD_ID
+      page_size: 2000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://opendata-geospatialdenver.hub.arcgis.com/datasets/geospatialDenver::crime/about
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City and County of Denver
+    coverage_state: CO
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Denver crime offenses from the official ArcGIS open data layer; source notes records can change as investigations are updated.
+    jurisdiction_name: Denver
+    jurisdiction_state: CO
+    date_column: FIRST_OCCURRENCE_DATE
+    time_column: null
+    offense_column: OFFENSE_CATEGORY_ID
+    offense_code_column: OFFENSE_TYPE_ID
+    latitude_column: GEO_LAT
+    longitude_column: GEO_LON
+    address_column: NEIGHBORHOOD_ID
+    zip_column: null
+    incident_id_column: OFFENSE_ID
+    source_crs: EPSG:4326
+    timezone: America/Denver
+
+  colorado_springs_2024:
+    file: data/raw/crime/colorado_springs_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://policedata.coloradosprings.gov/resource/bc88-hemr
+      limit: 100000
+      select:
+        - casenumber
+        - occurredfromdate
+        - occurredthroughdate
+        - index_crime_category
+        - crimecode
+        - crimecodedescription
+        - streetaddress
+        - city
+        - zip
+        - location_point
+        - patrol_division
+      where: occurredfromdate between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+    source_type: local_incident
+    source_url: https://policedata.coloradosprings.gov/resource/bc88-hemr
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Colorado Springs
+    coverage_state: CO
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Colorado Springs crime-level public data includes offense descriptions, ZIPs, and point WKT.
+    jurisdiction_name: Colorado Springs
+    jurisdiction_state: CO
+    date_column: occurredfromdate
+    time_column: null
+    offense_column: crimecodedescription
+    offense_code_column: crimecode
+    latitude_column: null
+    longitude_column: null
+    geocoded_point_column: location_point
+    address_column: streetaddress
+    zip_column: zip
+    incident_id_column: null
+    source_crs: EPSG:4326
+    timezone: America/Denver
+
+  boston_2024:
+    file: data/raw/crime/boston_crime_2024.csv
+    download:
+      type: ckan_datastore
+      base_url: https://data.boston.gov
+      resource_id: b973d8cb-eeb2-4e7e-99da-c92938efc9c0
+      select:
+        - _id
+        - INCIDENT_NUMBER
+        - OFFENSE_CODE
+        - OFFENSE_DESCRIPTION
+        - DISTRICT
+        - REPORTING_AREA
+        - SHOOTING
+        - OCCURRED_ON_DATE
+        - YEAR
+        - MONTH
+        - STREET
+        - Lat
+        - Long
+        - Location
+      where: "\"YEAR\" = '2024'"
+      order_by: "\"_id\""
+      page_size: 5000
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://data.boston.gov/dataset/crime-incident-reports-august-2015-to-date-source-new-system
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Boston
+    coverage_state: MA
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Boston crime incident reports queried from the official Analyze Boston CKAN datastore for 2024 records.
+    jurisdiction_name: Boston
+    jurisdiction_state: MA
+    date_column: OCCURRED_ON_DATE
+    time_column: null
+    offense_column: OFFENSE_DESCRIPTION
+    offense_code_column: OFFENSE_CODE
+    latitude_column: Lat
+    longitude_column: Long
+    address_column: STREET
+    zip_column: null
+    incident_id_column: _id
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  baltimore_2024:
+    file: data/raw/crime/baltimore_nibrs_group_a_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services1.arcgis.com/UWYHeuuJISiGmgXx/arcgis/rest/services/NIBRS_GroupA_Crime_Data/FeatureServer/0
+      where: CrimeDateTime >= DATE '2024-01-01' AND CrimeDateTime < DATE '2025-01-01'
+      out_fields:
+        - RowID
+        - CCNumber
+        - CrimeDateTime
+        - Description
+        - CrimeCode
+        - Weapon
+        - Location
+        - Longitude
+        - Latitude
+        - Neighborhood
+        - New_District
+        - PremiseType
+        - Total_Incidents
+      page_size: 2000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://data.baltimorecity.gov/datasets/baltimore::nibrs-group-a-crime-data/about
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Baltimore
+    coverage_state: MD
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Baltimore NIBRS Group A crime data from the official Open Baltimore ArcGIS layer.
+    jurisdiction_name: Baltimore
+    jurisdiction_state: MD
+    date_column: CrimeDateTime
+    time_column: null
+    offense_column: Description
+    offense_code_column: CrimeCode
+    latitude_column: Latitude
+    longitude_column: Longitude
+    address_column: Location
+    zip_column: null
+    incident_id_column: RowID
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  buffalo_2024:
+    file: data/raw/crime/buffalo_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.buffalony.gov/resource/d6g9-xbgu
+      limit: 50000
+      select:
+        - case_number
+        - incident_datetime
+        - incident_id
+        - incident_type_primary
+        - incident_description
+        - parent_incident_type
+        - address_1
+        - city
+        - state
+        - latitude
+        - longitude
+        - zip_code
+      where: incident_datetime between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+      order: incident_datetime ASC, case_number ASC
+    source_type: local_incident
+    source_url: https://data.buffalony.gov/Public-Safety/Crime-Incidents/d6g9-xbgu
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Buffalo
+    coverage_state: NY
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Buffalo Police Department preliminary crime incident data with latitude, longitude, and ZIP code.
+    jurisdiction_name: Buffalo
+    jurisdiction_state: NY
+    date_column: incident_datetime
+    time_column: null
+    offense_column: parent_incident_type
+    offense_code_column: incident_type_primary
+    latitude_column: latitude
+    longitude_column: longitude
+    address_column: address_1
+    zip_column: zip_code
+    incident_id_column: null
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  cincinnati_pdi_2024:
+    file: data/raw/crime/cincinnati_pdi_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.cincinnati-oh.gov/resource/k59e-2pvf
+      limit: 50000
+      select:
+        - instanceid
+        - incident_no
+        - date_from
+        - date_reported
+        - offense
+        - ucr_group
+        - address_x
+        - latitude_x
+        - longitude_x
+        - zip
+        - cpd_neighborhood
+      where: date_from between '2024-01-01T00:00:00' and '2024-06-03T00:00:00'
+      order: date_from ASC, instanceid ASC
+    source_type: local_incident
+    source_url: https://data.cincinnati-oh.gov/Safety/PDI-Police-Data-Initiative-Crime-Incidents/k59e-2pvf
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Cincinnati
+    coverage_state: OH
+    data_start_date: 2024-01-01
+    data_end_date: 2024-06-02
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Cincinnati PDI crime incidents through the June 2024 RMS transition.
+    jurisdiction_name: Cincinnati
+    jurisdiction_state: OH
+    date_column: date_from
+    time_column: null
+    offense_column: offense
+    offense_code_column: ucr_group
+    latitude_column: latitude_x
+    longitude_column: longitude_x
+    address_column: address_x
+    zip_column: zip
+    incident_id_column: null
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  cincinnati_stars_2024:
+    file: data/raw/crime/cincinnati_stars_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.cincinnati-oh.gov/resource/7aqy-xrv9
+      limit: 50000
+      select:
+        - incident_no
+        - datereported
+        - datefrom
+        - dateto
+        - stars_category
+        - type
+        - address_x
+        - latitude_x
+        - longitude_x
+        - cpd_neighborhood
+      where: datefrom between '2024-06-03T00:00:00' and '2024-12-31T23:59:59'
+      order: datefrom ASC, incident_no ASC
+    source_type: local_incident
+    source_url: https://data.cincinnati-oh.gov/safety/Reported-Crime-STARS-Category-Offenses-/7aqy-xrv9
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Cincinnati
+    coverage_state: OH
+    data_start_date: 2024-06-03
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Cincinnati STARS category offenses after the June 2024 RMS transition.
+    jurisdiction_name: Cincinnati
+    jurisdiction_state: OH
+    date_column: datefrom
+    time_column: null
+    offense_column: stars_category
+    offense_code_column: type
+    latitude_column: latitude_x
+    longitude_column: longitude_x
+    address_column: address_x
+    zip_column: null
+    incident_id_column: null
+    source_crs: EPSG:4326
+    timezone: America/New_York
+
+  kcmo_2024:
+    file: data/raw/crime/kcmo_crime_2024.csv
+    download:
+      type: socrata_csv
+      endpoint: https://data.kcmo.org/resource/isbe-v4d8
+      limit: 150000
+      select:
+        - report_no
+        - reported_date
+        - reported_time
+        - from_date
+        - from_time
+        - offense
+        - ibrs
+        - description
+        - address
+        - city
+        - zip_code
+        - area
+        - dvflag
+        - involvement
+        - fire_arm_used_flag
+        - location
+      where: reported_date between '2024-01-01T00:00:00' and '2024-12-31T23:59:59'
+      order: reported_date ASC, report_no ASC
+    source_type: local_incident
+    source_url: https://data.kcmo.org/Crime/KCPD-Crime-Data-2024/isbe-v4d8
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Kansas City
+    coverage_state: MO
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: reported_or_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Kansas City Police Department 2024 public crime data with NIBRS descriptions, ZIP codes, and point WKT when available.
+    jurisdiction_name: Kansas City
+    jurisdiction_state: MO
+    date_column: reported_date
+    time_column: null
+    offense_column: description
+    offense_fallback_columns:
+      - offense
+    offense_code_column: ibrs
+    latitude_column: null
+    longitude_column: null
+    geocoded_point_column: location
+    address_column: address
+    zip_column: zip_code
+    incident_id_column: null
+    source_crs: EPSG:4326
+    timezone: America/Chicago
+
+  dc_2024:
+    file: data/raw/crime/dc_crime_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://maps2.dcgis.dc.gov/dcgis/rest/services/FEEDS/MPD/FeatureServer/6
+      where: REPORT_DAT >= DATE '2024-01-01' AND REPORT_DAT < DATE '2025-01-01'
+      out_fields:
+        - CCN
+        - REPORT_DAT
+        - START_DATE
+        - END_DATE
+        - BLOCK
+        - OFFENSE
+        - METHOD
+        - SHIFT
+        - WARD
+        - ANC
+        - DISTRICT
+        - PSA
+        - LATITUDE
+        - LONGITUDE
+        - OBJECTID
+        - OCTO_RECORD_ID
+      order_by_fields: REPORT_DAT ASC, OBJECTID ASC
+      page_size: 1000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://opendata.dc.gov/datasets/DCGIS::crime-incidents-in-2024
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: District of Columbia
+    coverage_state: DC
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: block_geocoded_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: DC Metropolitan Police Department 2024 crime incidents from Open Data DC; source states addresses are geocoded to street block locations.
+    jurisdiction_name: District of Columbia
+    jurisdiction_state: DC
+    date_column: REPORT_DAT
+    time_column: null
+    offense_column: OFFENSE
+    offense_code_column: METHOD
+    latitude_column: LATITUDE
+    longitude_column: LONGITUDE
+    address_column: BLOCK
+    zip_column: null
+    incident_id_column: OBJECTID
+    source_crs: EPSG:4326
+    timezone: America/New_York
+    epoch_timezone: America/New_York
+
+  minneapolis_2024:
+    file: data/raw/crime/minneapolis_crime_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services.arcgis.com/afSMGVsC7QlRK1kZ/arcgis/rest/services/Crime_Data/FeatureServer/0
+      where: Occurred_Date >= DATE '2024-01-01' AND Occurred_Date < DATE '2025-01-01'
+      out_fields:
+        - Type
+        - DID
+        - Case_Number
+        - Case_NumberAlt
+        - Reported_Date
+        - Occurred_Date
+        - NIBRS_Crime_Against
+        - NIBRS_Group
+        - NIBRS_Code
+        - Offense_Category
+        - Offense
+        - Problem_Initial
+        - Problem_Final
+        - Address
+        - Precinct
+        - Neighborhood
+        - Ward
+        - Latitude
+        - Longitude
+        - Crime_Count
+        - OBJECTID
+      order_by_fields: Occurred_Date ASC, OBJECTID ASC
+      page_size: 16000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://opendata.minneapolismn.gov/datasets/cityoflakes::crime-data
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Minneapolis
+    coverage_state: MN
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: anonymized_or_reported_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: City of Minneapolis Crime Data from the official ArcGIS OpenData layer; Crime_Count is used as the counted incident/offense weight when rows represent multiple counted offenses.
+    jurisdiction_name: Minneapolis
+    jurisdiction_state: MN
+    date_column: Occurred_Date
+    time_column: null
+    offense_column: Offense
+    offense_code_column: NIBRS_Code
+    latitude_column: Latitude
+    longitude_column: Longitude
+    address_column: Address
+    zip_column: null
+    incident_id_column: OBJECTID
+    count_column: Crime_Count
+    source_crs: EPSG:4326
+    timezone: America/Chicago
+
+  nashville_2024:
+    file: data/raw/crime/nashville_incidents_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services2.arcgis.com/HdTo6HJqh92wn4D8/arcgis/rest/services/Metro_Nashville_Police_Department_Incidents_view/FeatureServer/0
+      where: Incident_Occurred >= DATE '2024-01-01' AND Incident_Occurred < DATE '2025-01-01' AND (Incident_Status_Description IS NULL OR Incident_Status_Description <> 'UNFOUNDED')
+      out_fields:
+        - Primary_Key
+        - Incident_Number
+        - Report_Type_Description
+        - Incident_Status_Description
+        - Investigation_Status
+        - Incident_Location
+        - Latitude
+        - Longitude
+        - Offense_Number
+        - Offense_NIBRS
+        - Offense_Description
+        - Weapon_Description
+        - Domestic_Related
+        - Victim_Type
+        - Mapped_Location
+        - ZIP_Code
+        - Incident_Occurred
+        - Incident_Reported
+        - OBJECTID
+      order_by_fields: Incident_Occurred ASC, OBJECTID ASC
+      page_size: 2000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://datanashvillegov-nashville.hub.arcgis.com/datasets/metro-nashville-police-department-incidents
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Metropolitan Government of Nashville and Davidson County
+    coverage_state: TN
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: rounded_or_mapped_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: Metro Nashville Police Department incidents from the official Nashville Open Data ArcGIS layer; records with Incident_Status_Description UNFOUNDED are excluded from the indexed incident set.
+    jurisdiction_name: Nashville
+    jurisdiction_state: TN
+    date_column: Incident_Occurred
+    time_column: null
+    offense_column: Offense_Description
+    offense_code_column: Offense_NIBRS
+    latitude_column: Latitude
+    longitude_column: Longitude
+    address_column: Incident_Location
+    zip_column: ZIP_Code
+    incident_id_column: OBJECTID
+    source_crs: EPSG:4326
+    timezone: America/Chicago
+
+  charlotte_2024:
+    file: data/raw/crime/charlotte_cmpd_incidents_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://gis.charlottenc.gov/arcgis/rest/services/CMPD/CMPDIncidents/MapServer/0
+      where: YEAR = '2024' AND (CLEARANCE_STATUS IS NULL OR UPPER(CLEARANCE_STATUS) <> 'UNFOUNDED') AND HIGHEST_NIBRS_CODE NOT LIKE '8%'
+      out_fields:
+        - YEAR
+        - INCIDENT_REPORT_ID
+        - LOCATION
+        - CITY
+        - STATE
+        - ZIP
+        - LATITUDE_PUBLIC
+        - LONGITUDE_PUBLIC
+        - DIVISION_ID
+        - CMPD_PATROL_DIVISION
+        - DATE_REPORTED
+        - DATE_INCIDENT_BEGAN
+        - DATE_INCIDENT_END
+        - ADDRESS_DESCRIPTION
+        - LOCATION_TYPE_DESCRIPTION
+        - PLACE_TYPE_DESCRIPTION
+        - CLEARANCE_STATUS
+        - CLEARANCE_DETAIL_STATUS
+        - CLEARANCE_DATE
+        - HIGHEST_NIBRS_CODE
+        - HIGHEST_NIBRS_DESCRIPTION
+        - OBJECTID
+      order_by_fields: DATE_REPORTED ASC, OBJECTID ASC
+      page_size: 2500
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://data.charlottenc.gov/datasets/charlotte::cmpd-incidents-1
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: Charlotte-Mecklenburg Police Department jurisdiction
+    coverage_state: NC
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: historical_snapshot
+    coordinate_quality: public_rounded_or_generalized_point
+    offense_mapping_quality: configured_keyword_mapping
+    coverage_notes: CMPD Incidents from the official City of Charlotte ArcGIS layer; records marked Unfounded and NIBRS 800-series non-criminal reports are excluded per source documentation.
+    jurisdiction_name: Charlotte
+    jurisdiction_state: NC
+    date_column: DATE_REPORTED
+    time_column: null
+    offense_column: HIGHEST_NIBRS_DESCRIPTION
+    offense_code_column: HIGHEST_NIBRS_CODE
+    latitude_column: LATITUDE_PUBLIC
+    longitude_column: LONGITUDE_PUBLIC
+    address_column: LOCATION
+    zip_column: ZIP
+    incident_id_column: OBJECTID
+    source_crs: EPSG:4326
+    timezone: America/New_York
