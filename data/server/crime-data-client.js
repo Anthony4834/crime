@@ -40,6 +40,24 @@ export async function loadCoverage(options = {}) {
   return getJson(`${baseUrl}/${coverageInfo.path}`);
 }
 
+export async function getCrimeStatsForZip(options = {}) {
+  const baseUrl = (options.baseUrl || "").replace(/\/$/, "");
+  if (!baseUrl) throw new Error("baseUrl is required");
+  if (!options.zip) throw new Error("zip is required");
+
+  const year = options.year || await latestYearFromBaseUrl(baseUrl);
+  const zip = normalizeZcta(options.zip);
+  return getJson(`${baseUrl}/api/v1/${year}/zips/${zip}.json`);
+}
+
+export function crimeStatsZipUrl(options = {}) {
+  const baseUrl = (options.baseUrl || "").replace(/\/$/, "");
+  if (!baseUrl) throw new Error("baseUrl is required");
+  if (!options.year) throw new Error("year is required");
+  if (!options.zip) throw new Error("zip is required");
+  return `${baseUrl}/api/v1/${options.year}/zips/${normalizeZcta(options.zip)}.json`;
+}
+
 async function getJson(url) {
   const response = await fetch(url, { mode: "cors" });
   if (!response.ok) throw new Error(`Request failed: ${response.status} ${url}`);
@@ -54,4 +72,8 @@ function latestYear(manifest) {
   const years = Object.keys(manifest.years || {}).sort();
   if (!years.length) throw new Error("No years are available in the crime data bundle");
   return years[years.length - 1];
+}
+
+async function latestYearFromBaseUrl(baseUrl) {
+  return latestYear(await getJson(`${baseUrl}/manifest.json`));
 }

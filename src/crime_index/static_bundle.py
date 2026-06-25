@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
@@ -45,6 +46,7 @@ def build_static_bundle(
     output_dir = Path(output_dir)
     year_filter = {str(year) for year in years} if years else None
     scope_filter = set(scopes) if scopes else None
+    _clear_generated_api_files(output_dir)
 
     manifest: dict[str, Any] = {
         "schema_version": 1,
@@ -184,6 +186,24 @@ def _write_combined_scopes(
             "coverage_status_counts": _counts(records, "coverage_status"),
             "data_source_type_counts": _counts(records, "data_source_type"),
         }
+        year_entry["zip_api"] = _write_zip_api(output_dir, year, records)
+
+
+def _write_zip_api(output_dir: Path, year: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+    base_path = Path("api") / "v1" / year / "zips"
+    for record in records:
+        zcta = str(record["zcta"]).zfill(5)
+        api_record = dict(record)
+        api_record["zip"] = zcta
+        api_record["zcta"] = zcta
+        api_record["api_version"] = "v1"
+        api_record["api_path"] = f"/{base_path.as_posix()}/{zcta}.json"
+        _write_json(output_dir / base_path / f"{zcta}.json", api_record)
+    return {
+        "scope": COMBINED_SCOPE,
+        "path_template": f"{base_path.as_posix()}/{{zip}}.json",
+        "row_count": len(records),
+    }
 
 
 def check_static_cors(base_url: str, origins: list[str]) -> list[dict[str, Any]]:
@@ -215,6 +235,12 @@ def check_static_cors(base_url: str, origins: list[str]) -> list[dict[str, Any]]
                 }
             )
     return results
+
+
+def _clear_generated_api_files(output_dir: Path) -> None:
+    api_dir = output_dir / "api" / "v1"
+    if api_dir.exists():
+        shutil.rmtree(api_dir)
 
 
 def _read_csv_records(path: Path) -> list[dict[str, Any]]:
@@ -324,6 +350,24 @@ export async function loadCoverage(options = {}) {
   return getJson(`${baseUrl}/${coverageInfo.path}`);
 }
 
+export async function getCrimeStatsForZip(options = {}) {
+  const baseUrl = (options.baseUrl || "").replace(/\\/$/, "");
+  if (!baseUrl) throw new Error("baseUrl is required");
+  if (!options.zip) throw new Error("zip is required");
+
+  const year = options.year || await latestYearFromBaseUrl(baseUrl);
+  const zip = normalizeZcta(options.zip);
+  return getJson(`${baseUrl}/api/v1/${year}/zips/${zip}.json`);
+}
+
+export function crimeStatsZipUrl(options = {}) {
+  const baseUrl = (options.baseUrl || "").replace(/\\/$/, "");
+  if (!baseUrl) throw new Error("baseUrl is required");
+  if (!options.year) throw new Error("year is required");
+  if (!options.zip) throw new Error("zip is required");
+  return `${baseUrl}/api/v1/${options.year}/zips/${normalizeZcta(options.zip)}.json`;
+}
+
 async function getJson(url) {
   const response = await fetch(url, { mode: "cors" });
   if (!response.ok) throw new Error(`Request failed: ${response.status} ${url}`);
@@ -338,5 +382,9 @@ function latestYear(manifest) {
   const years = Object.keys(manifest.years || {}).sort();
   if (!years.length) throw new Error("No years are available in the crime data bundle");
   return years[years.length - 1];
+}
+
+async function latestYearFromBaseUrl(baseUrl) {
+  return latestYear(await getJson(`${baseUrl}/manifest.json`));
 }
 """

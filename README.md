@@ -378,6 +378,11 @@ data/server/
   .nojekyll
   manifest.json
   crime-data-client.js
+  api/
+    v1/
+      2024/
+        zips/
+          90210.json
   2024/
     coverage.json
     national_combined/
@@ -392,6 +397,7 @@ Stable URLs after deployment:
 
 ```text
 https://YOUR_PAGES_HOST/manifest.json
+https://YOUR_PAGES_HOST/api/v1/2024/zips/90210.json
 https://YOUR_PAGES_HOST/2024/national_combined/scores.json
 https://YOUR_PAGES_HOST/2024/source_universe/scores.json
 https://YOUR_PAGES_HOST/2024/national_modeled_baseline/scores.json
@@ -403,16 +409,27 @@ Browser usage from `localhost` or `fmr.fyi`:
 
 ```html
 <script type="module">
-  import { loadCrimeData } from "https://YOUR_PAGES_HOST/crime-data-client.js";
+  import { getCrimeStatsForZip } from "https://YOUR_PAGES_HOST/crime-data-client.js";
 
-  const crimeData = await loadCrimeData({
+  const stats = await getCrimeStatsForZip({
     baseUrl: "https://YOUR_PAGES_HOST",
+    zip: "90210",
     year: 2024
   });
 
-  console.log(crimeData.getZcta("90210"));
+  console.log(stats);
 </script>
 ```
+
+For direct fetches, use the ZIP endpoint:
+
+```js
+const stats = await fetch(
+  "https://YOUR_PAGES_HOST/api/v1/2024/zips/90210.json"
+).then((response) => response.json());
+```
+
+The request key is a 5-digit ZIP-shaped value and is matched to the Census ZCTA key. ZIPs and ZCTAs are not identical, so response objects include both `zip` and `zcta`; for this static API they are the same normalized key.
 
 GitHub Pages serves static files with permissive CORS headers. The bundle records the intended consumer origins in `manifest.json` from `config/settings.yaml`:
 

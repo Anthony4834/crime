@@ -65,3 +65,16 @@ def test_static_bundle_builds_manifest_and_yearly_scores(tmp_path: Path) -> None
     assert combined["records"][0]["coverage_status"] == "observed"
     assert combined["records"][0]["comparison_scope"] == "national_combined"
     assert combined["records"][1]["coverage_status"] == "national_modeled"
+
+    zip_api = manifest["years"]["2024"]["zip_api"]
+    assert zip_api["path_template"] == "api/v1/2024/zips/{zip}.json"
+    assert zip_api["scope"] == "national_combined"
+    assert zip_api["row_count"] == 2
+
+    zip_record = json.loads((output_dir / "api" / "v1" / "2024" / "zips" / "00601.json").read_text(encoding="utf-8"))
+    assert zip_record["zip"] == "00601"
+    assert zip_record["zcta"] == "00601"
+    assert zip_record["api_version"] == "v1"
+    assert zip_record["api_path"] == "/api/v1/2024/zips/00601.json"
+    assert zip_record["coverage_status"] == "observed"
+    assert zip_record["overall_crime_score_0_100"] == 42.5
