@@ -359,7 +359,19 @@ Or:
 make build-static-bundle
 ```
 
-Publish `data/server/` as the GitHub Pages site root. The bundle contains:
+Publish `data/server/` as the GitHub Pages site root. This repo uses a `gh-pages` branch whose root is the contents of `data/server/`:
+
+```bash
+git subtree push --prefix data/server origin gh-pages
+```
+
+Or:
+
+```bash
+make deploy-github-pages
+```
+
+The bundle contains:
 
 ```text
 data/server/
