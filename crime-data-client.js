@@ -111,6 +111,16 @@ export async function getCrimeStatsForZips(options = {}) {
   });
 }
 
+export async function getCrimeStatsForCounty(options = {}) {
+  const baseUrl = (options.baseUrl || "").replace(/\/$/, "");
+  if (!baseUrl) throw new Error("baseUrl is required");
+  if (!options.countyFips) throw new Error("countyFips is required");
+
+  const year = options.year || await latestYearFromBaseUrl(baseUrl);
+  const countyFips = String(options.countyFips).trim().padStart(5, "0");
+  return getJson(`${baseUrl}/api/v1/${year}/counties/${countyFips}.json`);
+}
+
 export function analyzeCrimeStatsGroup(records, options = {}) {
   const uniqueRecords = dedupeRecords(records);
   const requestedZips = options.requestedZips || uniqueRecords.map((record) => normalizeZcta(record.zcta));
@@ -161,7 +171,9 @@ export function analyzeCrimeStatsGroup(records, options = {}) {
     coverage: {
       coverage_status_counts: coverageStatusCounts,
       data_source_type_counts: dataSourceTypeCounts,
-      observed_zip_count: coverageStatusCounts.observed || 0,
+      direct_observed_zip_count: coverageStatusCounts.observed || 0,
+      county_observed_zip_count: coverageStatusCounts.county_observed_allocated || 0,
+      observed_zip_count: (coverageStatusCounts.observed || 0) + (coverageStatusCounts.county_observed_allocated || 0),
       modeled_zip_count: coverageStatusCounts.national_modeled || 0
     },
     confidence_grade_counts: confidenceGradeCounts,
