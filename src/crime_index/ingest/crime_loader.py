@@ -12,6 +12,7 @@ import duckdb
 import pandas as pd
 
 from crime_index.config import load_sources
+from crime_index.config import select_sources
 from crime_index.db import get_connection, init_db
 from crime_index.normalize.dates import parse_occurred_at, parse_year_day_time
 from crime_index.normalize.locations import to_float
@@ -25,14 +26,18 @@ LOGGER = logging.getLogger(__name__)
 def ingest_crime(
     sources_config_path: str | Path = "config/sources.yaml",
     database_path: str | Path | None = None,
+    source_names: list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, int]:
     init_db(database_path)
-    sources = load_sources(sources_config_path)
+    sources = select_sources(load_sources(sources_config_path), source_names)
     results: dict[str, int] = {}
     with get_connection(database_path) as con:
-        con.execute("DELETE FROM raw_crime_files")
-        con.execute("DELETE FROM raw_crime_records")
-        con.execute("DELETE FROM staged_crime_incidents")
+        if source_names:
+            _delete_sources(con, list(sources))
+        else:
+            con.execute("DELETE FROM raw_crime_files")
+            con.execute("DELETE FROM raw_crime_records")
+            con.execute("DELETE FROM staged_crime_incidents")
         for source_name, source_config in sources.items():
             row_count = ingest_source(con, source_name, source_config)
             results[source_name] = row_count
@@ -398,3 +403,11 @@ def _insert_df(con: duckdb.DuckDBPyConnection, table: str, df: pd.DataFrame) -> 
     columns = ", ".join(df.columns)
     con.execute(f"INSERT INTO {table} ({columns}) SELECT {columns} FROM _insert_df")
     con.unregister("_insert_df")
+
+
+def _delete_sources(con: duckdb.DuckDBPyConnection, source_names: list[str]) -> None:
+    if not source_names:
+        return
+    placeholders = ", ".join("?" for _ in source_names)
+    for table in ["raw_crime_files", "raw_crime_records", "staged_crime_incidents"]:
+        con.execute(f"DELETE FROM {table} WHERE source_name IN ({placeholders})", source_names)

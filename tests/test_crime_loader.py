@@ -1,6 +1,8 @@
 import pandas as pd
 
+from crime_index.db import get_connection
 from crime_index.ingest.crime_loader import build_staged_incidents
+from crime_index.ingest.crime_loader import ingest_crime
 
 
 def test_build_staged_incidents_supports_day_of_year_and_point_wkt() -> None:
@@ -119,3 +121,50 @@ def test_build_staged_incidents_only_timezone_shifts_epoch_when_configured() -> 
 
     assert unshifted.iloc[0]["occurred_date"].isoformat() == "2025-01-01"
     assert shifted.iloc[0]["occurred_date"].isoformat() == "2024-12-31"
+
+
+def test_ingest_crime_can_replace_one_source(tmp_path) -> None:
+    source_a = tmp_path / "a.csv"
+    source_b = tmp_path / "b.csv"
+    source_a.write_text("id,date,offense\n1,2024-01-01,THEFT\n", encoding="utf-8")
+    source_b.write_text("id,date,offense\n1,2024-01-01,BURGLARY\n", encoding="utf-8")
+    config = tmp_path / "sources.yaml"
+    config.write_text(
+        f"""
+sources:
+  a:
+    file: {source_a.as_posix()}
+    incident_id_column: id
+    date_column: date
+    offense_column: offense
+  b:
+    file: {source_b.as_posix()}
+    incident_id_column: id
+    date_column: date
+    offense_column: offense
+""",
+        encoding="utf-8",
+    )
+    database = tmp_path / "crime_index.duckdb"
+
+    ingest_crime(config, database_path=database)
+    source_b.write_text(
+        "id,date,offense\n1,2024-01-01,BURGLARY\n2,2024-01-02,ROBBERY\n",
+        encoding="utf-8",
+    )
+
+    ingest_crime(config, database_path=database, source_names=["b"])
+
+    with get_connection(database) as con:
+        rows = dict(
+            con.execute(
+                """
+                SELECT source_name, count(*)
+                FROM staged_crime_incidents
+                GROUP BY source_name
+                ORDER BY source_name
+                """
+            ).fetchall()
+        )
+
+    assert rows == {"a": 1, "b": 2}

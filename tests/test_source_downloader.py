@@ -2,6 +2,7 @@ from crime_index.ingest.source_downloader import (
     build_arcgis_query_url,
     build_ckan_datastore_sql_url,
     build_socrata_csv_url,
+    download_configured_sources,
 )
 
 
@@ -61,3 +62,21 @@ def test_build_ckan_datastore_sql_url() -> None:
     assert "SELECT+%22id%22%2C+%22occurred%22%2C+%22offense%22+FROM+%22abcd-1234%22" in url
     assert "WHERE+%22YEAR%22+%3D+%272024%27" in url
     assert "LIMIT+1000+OFFSET+2000" in url
+
+
+def test_download_configured_sources_can_filter_by_source(tmp_path) -> None:
+    config = tmp_path / "sources.yaml"
+    config.write_text(
+        """
+sources:
+  first:
+    file: first.csv
+  second:
+    file: second.csv
+""",
+        encoding="utf-8",
+    )
+
+    results = download_configured_sources(config, source_names=["second"])
+
+    assert results == {"second": "no_download_config"}

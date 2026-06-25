@@ -35,6 +35,16 @@ def load_sources(path: str | Path = DEFAULT_SOURCES_PATH) -> dict[str, Any]:
     return sources
 
 
+def select_sources(sources: dict[str, Any], source_names: list[str] | tuple[str, ...] | None) -> dict[str, Any]:
+    if not source_names:
+        return sources
+    missing = [source_name for source_name in source_names if source_name not in sources]
+    if missing:
+        available = ", ".join(sorted(sources))
+        raise ValueError(f"Unknown source(s): {', '.join(missing)}. Available sources: {available}")
+    return {source_name: sources[source_name] for source_name in source_names}
+
+
 def load_offense_mapping(path: str | Path = DEFAULT_OFFENSE_MAPPING_PATH) -> dict[str, Any]:
     return load_yaml(path)
 

@@ -72,8 +72,11 @@ def init_db() -> None:
 
 
 @app.command("ingest-crime")
-def ingest_crime(config: Path = typer.Option(Path("config/sources.yaml"), "--config")) -> None:
-    results = ingest_crime_stage(config)
+def ingest_crime(
+    config: Path = typer.Option(Path("config/sources.yaml"), "--config"),
+    source: list[str] | None = typer.Option(None, "--source", help="Source name to ingest. Can be repeated."),
+) -> None:
+    results = ingest_crime_stage(config, source_names=source)
     _print_mapping("Crime ingestion", results)
 
 
@@ -81,8 +84,9 @@ def ingest_crime(config: Path = typer.Option(Path("config/sources.yaml"), "--con
 def download_sources(
     config: Path = typer.Option(Path("config/sources.yaml"), "--config"),
     force: bool = typer.Option(False, "--force", help="Overwrite existing raw source files."),
+    source: list[str] | None = typer.Option(None, "--source", help="Source name to download. Can be repeated."),
 ) -> None:
-    results = download_configured_sources(config, force=force)
+    results = download_configured_sources(config, force=force, source_names=source)
     _print_mapping("Source downloads", results)
 
 

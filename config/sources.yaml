@@ -925,3 +925,104 @@ sources:
     incident_id_column: OBJECTID
     source_crs: EPSG:4326
     timezone: America/New_York
+
+  san_diego_2024:
+    file: data/raw/crime/san_diego_nibrs_2024.csv
+    download:
+      type: direct
+      url: https://seshat.datasd.org/police_nibrs/pd_nibrs_2024_datasd.csv
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://data.sandiego.gov/datasets/police-nibrs/
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of San Diego
+    coverage_state: CA
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: quarterly_snapshot
+    coordinate_quality: geocoded_block_or_intersection
+    offense_mapping_quality: nibrs_and_configured_keyword_mapping
+    coverage_notes: San Diego Police Department NIBRS offense data includes date, offense category, ZIP, and geocoded latitude/longitude. Street addresses are block/intersection locations.
+    jurisdiction_name: San Diego
+    jurisdiction_state: CA
+    date_column: occured_on
+    time_column: null
+    offense_column: ibr_offense_description
+    offense_fallback_columns:
+      - pd_offense_category
+      - ibr_category
+      - code_section
+    offense_code_column: ibr_offense
+    latitude_column: latitude
+    longitude_column: longitude
+    address_column: block_addr
+    zip_column: zip
+    incident_id_column: nibrs_uniq
+    source_crs: EPSG:4326
+    timezone: America/Los_Angeles
+
+  detroit_2024:
+    file: data/raw/crime/detroit_rms_incidents_2024.csv
+    download:
+      type: arcgis_query
+      endpoint: https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/RMS_Crime_Incidents_2024/FeatureServer/0
+      where: incident_year = 2024 AND (case_status IS NULL OR UPPER(case_status) <> 'UNFOUNDED')
+      out_fields:
+        - incident_entry_id
+        - nearest_intersection
+        - offense_category
+        - offense_description
+        - state_offense_code
+        - arrest_charge
+        - charge_description
+        - incident_occurred_at
+        - incident_time
+        - incident_day_of_week
+        - incident_hour_of_day
+        - incident_year
+        - case_id
+        - case_status
+        - crime_id
+        - report_number
+        - police_precinct
+        - census_block_2020_geoid
+        - neighborhood
+        - council_district
+        - zip_code
+        - longitude
+        - latitude
+        - ESRI_OID
+      order_by_fields: incident_occurred_at ASC, ESRI_OID ASC
+      page_size: 2000
+      return_geometry: false
+      timeout_seconds: 300
+    source_type: local_incident
+    source_url: https://data-detroitmi.hub.arcgis.com/items/ed7646f5c75c4de4ae0281054b9300a9
+    source_year: 2024
+    coverage_level: jurisdiction
+    coverage_area_name: City of Detroit
+    coverage_state: MI
+    data_start_date: 2024-01-01
+    data_end_date: 2024-12-31
+    update_cadence: daily_snapshot
+    coordinate_quality: nearest_intersection_point
+    offense_mapping_quality: micr_and_configured_keyword_mapping
+    coverage_notes: Detroit Police Department RMS crime incidents; each row is an offense charge, locations are reported as nearest intersections, and unfounded records are excluded from the indexed incident set.
+    jurisdiction_name: Detroit
+    jurisdiction_state: MI
+    date_column: incident_occurred_at
+    epoch_timezone: America/Detroit
+    time_column: null
+    offense_column: offense_description
+    offense_fallback_columns:
+      - offense_category
+      - charge_description
+    offense_code_column: state_offense_code
+    latitude_column: latitude
+    longitude_column: longitude
+    address_column: nearest_intersection
+    zip_column: zip_code
+    incident_id_column: incident_entry_id
+    source_crs: EPSG:4326
+    timezone: America/Detroit

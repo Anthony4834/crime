@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from crime_index.config import load_sources
+from crime_index.config import select_sources
 
 LOGGER = logging.getLogger(__name__)
 
@@ -16,8 +17,9 @@ LOGGER = logging.getLogger(__name__)
 def download_configured_sources(
     sources_config_path: str | Path = "config/sources.yaml",
     force: bool = False,
+    source_names: list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, str]:
-    sources = load_sources(sources_config_path)
+    sources = select_sources(load_sources(sources_config_path), source_names)
     results: dict[str, str] = {}
     for source_name, source in sources.items():
         download_config = source.get("download") or {}

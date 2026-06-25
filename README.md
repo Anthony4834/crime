@@ -301,7 +301,7 @@ The modeled baseline uses the BJS 2024 national offense rates from *Crime Known 
 
 The county and modeled outputs are retained as offline analytical artifacts only. They are not published as ZIP API responses because county averages and national baselines can be misleading for individual ZIPs, cities, and small high-variance places.
 
-After the latest local rebuild, the public static API publishes 1,185 direct observed ZCTAs from nineteen local incident feeds. ZIPs outside that direct observed set return no API record instead of falling back to county or national modeled values.
+After the latest local rebuild, the public static API publishes 1,265 direct observed ZCTAs from twenty-one local incident feeds. ZIPs outside that direct observed set return no API record instead of falling back to county or national modeled values.
 
 - LAPD 2024 public crime incidents.
 - Chicago 2024 public crime incidents.
@@ -322,8 +322,10 @@ After the latest local rebuild, the public static API publishes 1,185 direct obs
 - Minneapolis 2024 crime data.
 - Metro Nashville Police Department 2024 incidents, excluding records marked `UNFOUNDED`.
 - Charlotte-Mecklenburg Police Department 2024 incidents, excluding records marked `UNFOUNDED` and NIBRS 800-series non-criminal reports.
+- San Diego Police Department 2024 NIBRS crime offenses.
+- Detroit Police Department 2024 RMS crime incidents, excluding records marked `UNFOUNDED`.
 
-All nineteen are configured in `config/sources.yaml` with `download` blocks, so `python -m crime_index.cli download-sources` can recreate the raw files.
+All twenty-one are configured in `config/sources.yaml` with `download` blocks, so `python -m crime_index.cli download-sources` can recreate the raw files.
 
 ## Path To Full-US Indexed Coverage
 
@@ -336,6 +338,9 @@ The hosted API does not currently have full-US granular coverage. It deliberatel
 5. Add high-volume official city and county incident feeds with coordinates for higher-confidence direct observed ZCTA rows.
 6. Add explicit city or agency rollup products only when the source geography supports that claim; do not relabel county data as ZIP or city data.
 7. Rebuild with `python -m crime_index.cli run-all --year 2024`, then review `data/processed/quality_report.md` and `data/server/manifest.json` before using the exports.
+8. Track the remaining direct-only gap with `make coverage-gaps`; this writes `data/processed/direct_zcta_targets_2024_minpop_50000.csv`.
+
+See [docs/granular-zcta-ingestion-pipeline.md](docs/granular-zcta-ingestion-pipeline.md) for the gap-first ingestion pipeline and publishability rules.
 
 Analytical compatibility outputs are also written:
 
@@ -493,6 +498,20 @@ The default static scope is `source_universe`. The hosted bundle disables runtim
 5. Put ACS population data in `data/raw/census/`.
 6. Run `python -m crime_index.cli run-all --year YEAR`.
 7. Review `data/processed/quality_report.md` for assignment, classification, and population coverage.
+
+For iterative coverage work, download and ingest just the new source before rerunning the downstream stages:
+
+```bash
+python -m crime_index.cli download-sources --source SOURCE_NAME
+python -m crime_index.cli ingest-crime --source SOURCE_NAME
+python -m crime_index.cli normalize-crime
+python -m crime_index.cli assign-zctas
+python -m crime_index.cli aggregate --year 2024
+python -m crime_index.cli build-index --year 2024 --scope source_universe
+python -m crime_index.cli export --year 2024
+python -m crime_index.cli build-static-bundle --year 2024
+python scripts/report_direct_coverage_gaps.py --year 2024 --target-output data/processed/direct_zcta_targets_2024_minpop_50000.csv
+```
 
 ## DuckDB To Postgres/PostGIS
 

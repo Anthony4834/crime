@@ -139,7 +139,8 @@ def assign_zctas(database_path: str | Path | None = None, settings: dict[str, An
             """
         ).fetchdf()
         zcta_gdf = load_zcta_geodataframe(con)
-        assignments = assign_dataframe_to_zctas(incidents, zcta_gdf, invalid_values)
+        zcta_state_fips = load_zcta_state_fips(con)
+        assignments = assign_dataframe_to_zctas(incidents, zcta_gdf, invalid_values, zcta_state_fips)
         con.execute("DELETE FROM incident_zcta_assignment")
         _insert_df(con, "incident_zcta_assignment", assignments)
 
@@ -156,10 +157,35 @@ def load_zcta_geodataframe(con: duckdb.DuckDBPyConnection) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(zctas[["zcta", "state_fips", "geometry"]], geometry="geometry", crs="EPSG:4326")
 
 
+def load_zcta_state_fips(con: duckdb.DuckDBPyConnection) -> dict[str, str]:
+    try:
+        rows = con.execute(
+            """
+            SELECT zcta, state_code
+            FROM (
+              SELECT
+                zcta,
+                state_code,
+                row_number() OVER (PARTITION BY zcta ORDER BY allocation_weight DESC, state_code) AS rn
+              FROM zip_county_mapping
+            )
+            WHERE rn = 1
+            """
+        ).fetchdf()
+    except duckdb.CatalogException:
+        return {}
+    if rows.empty:
+        return {}
+    rows["state_fips"] = rows["state_code"].map(STATE_TO_FIPS)
+    rows = rows.dropna(subset=["zcta", "state_fips"])
+    return dict(zip(rows["zcta"].astype(str), rows["state_fips"].astype(str)))
+
+
 def assign_dataframe_to_zctas(
     incidents: pd.DataFrame,
     zcta_gdf: gpd.GeoDataFrame,
     invalid_coordinate_values: list[list[float]] | None = None,
+    zcta_state_fips: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     if incidents.empty:
         return pd.DataFrame(columns=_assignment_columns())
@@ -175,7 +201,7 @@ def assign_dataframe_to_zctas(
     base["coordinates_outside_expected_state"] = base["has_valid_coordinates"] & ~_state_bounds_mask(base)
     base["has_valid_coordinates"] = base["has_valid_coordinates"] & ~base["coordinates_outside_expected_state"]
     matched_by_incident: dict[str, str] = {}
-    zcta_to_state = zcta_gdf.drop_duplicates("zcta").set_index("zcta")["state_fips"].to_dict() if "state_fips" in zcta_gdf else {}
+    zcta_to_state = _zcta_state_lookup(zcta_gdf, zcta_state_fips)
     valid = base[base["has_valid_coordinates"]].copy()
     if not valid.empty and not zcta_gdf.empty:
         points = gpd.GeoDataFrame(
@@ -199,7 +225,7 @@ def assign_dataframe_to_zctas(
     assignments = pd.DataFrame(
         {
             "incident_id": base["incident_id"],
-            "zcta": base["incident_id"].map(matched_by_incident),
+            "zcta": base["incident_id"].map(matched_by_incident).astype("object"),
             "assignment_method": "unassigned",
             "assignment_confidence": "none",
             "assignment_notes": "missing_coordinates_and_zip",
@@ -226,6 +252,15 @@ def assign_dataframe_to_zctas(
     assignments.loc[zip_mask, "assignment_notes"] = "missing_or_invalid_coordinates_used_zip"
     assignments = _apply_state_sanity_check(assignments, base, zcta_to_state)
     return assignments[_assignment_columns()]
+
+
+def _zcta_state_lookup(zcta_gdf: gpd.GeoDataFrame, zcta_state_fips: dict[str, str] | None) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    if "state_fips" in zcta_gdf and "zcta" in zcta_gdf:
+        state_rows = zcta_gdf[["zcta", "state_fips"]].dropna(subset=["zcta", "state_fips"])
+        lookup.update(dict(zip(state_rows["zcta"].astype(str), state_rows["state_fips"].astype(str))))
+    lookup.update({str(zcta): str(state_fips) for zcta, state_fips in (zcta_state_fips or {}).items() if state_fips})
+    return lookup
 
 
 def _apply_state_sanity_check(

@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: setup init-db ingest-crime normalize-crime load-geography assign-zctas load-population aggregate build-index profile export build-static-bundle deploy-github-pages check-static-cors run-all test
+.PHONY: setup init-db ingest-crime normalize-crime load-geography assign-zctas load-population aggregate build-index profile export build-static-bundle coverage-gaps deploy-github-pages check-static-cors run-all test
 
 setup:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -37,6 +37,9 @@ export:
 
 build-static-bundle:
 	$(PYTHON) -m crime_index.cli build-static-bundle --year 2024
+
+coverage-gaps:
+	$(PYTHON) scripts/report_direct_coverage_gaps.py --year 2024 --target-output data/processed/direct_zcta_targets_2024_minpop_50000.csv
 
 deploy-github-pages:
 	git subtree push --prefix data/server origin gh-pages

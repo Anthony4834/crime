@@ -166,6 +166,55 @@ def create_tables(con: duckdb.DuckDBPyConnection) -> None:
     )
     con.execute(
         """
+        CREATE TABLE IF NOT EXISTS source_candidates (
+            candidate_id TEXT,
+            source_name TEXT,
+            publisher TEXT,
+            publisher_type TEXT,
+            homepage_url TEXT,
+            api_url TEXT,
+            download_type TEXT,
+            license TEXT,
+            update_cadence TEXT,
+            available_years TEXT,
+            source_geography TEXT,
+            coverage_area_name TEXT,
+            coverage_state TEXT,
+            has_coordinates BOOLEAN,
+            has_zip BOOLEAN,
+            has_zcta BOOLEAN,
+            has_source_geometry BOOLEAN,
+            date_fields TEXT,
+            offense_fields TEXT,
+            id_fields TEXT,
+            discovered_for_year INTEGER,
+            discovered_from TEXT,
+            discovered_at TIMESTAMP,
+            notes TEXT
+        )
+        """
+    )
+    con.execute(
+        """
+        CREATE TABLE IF NOT EXISTS source_evaluations (
+            evaluation_id TEXT,
+            candidate_id TEXT,
+            source_name TEXT,
+            evaluated_at TIMESTAMP,
+            publishability_tier TEXT,
+            status TEXT,
+            rejection_reason TEXT,
+            sample_row_count BIGINT,
+            location_completeness DOUBLE,
+            date_completeness DOUBLE,
+            offense_completeness DOUBLE,
+            expected_zcta_claim_level TEXT,
+            reviewer_notes TEXT
+        )
+        """
+    )
+    con.execute(
+        """
         CREATE TABLE IF NOT EXISTS zcta_national_coverage (
             zcta TEXT,
             year INTEGER,
